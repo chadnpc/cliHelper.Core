@@ -912,6 +912,85 @@ class Gist {
 
 #endregion GitHub
 
+class SignatureUtils {
+  # Static Properties
+  static [string] $SIGNATURE_KEYNAME = "signature"
+  static [string] $AppName = "ASP"
+  static [string] $NewLine = "`n"
+  static [string] $EmptyUriPath = "/"
+  static [string] $equals = "="
+  static [string] $And = "&"
+  static [string] $UTF_8_Encoding = "UTF-8"
+
+  # Static Methods
+
+  # Method to sign parameters
+  static [string] signParameters([hashtable] $parameters, [string] $key, [string] $HttpMethod, [string]$h0st, [string] $RequestURI, [string] $algorithm) {
+    $stringToSign = [SignatureUtils]::calculateStringToSignV2($parameters, $HttpMethod, $h0st, $RequestURI)
+    return [SignatureUtils]::sign($stringToSign, $key, $algorithm)
+  }
+
+  # Method to calculate the string to sign for SignatureVersion 2
+  static [string] calculateStringToSignV2([hashtable] $parameters, [string] $httpMethod, [string] $hostHeader, [string] $requestURI) {
+    if (-not $httpMethod) { throw "HttpMethod cannot be null" }
+
+    $stringToSign = "$httpMethod$([SignatureUtils]::NewLine)"
+
+    # Host header to lowercase
+    $stringToSign += ($hostHeader.ToLower() + [SignatureUtils]::NewLine)
+
+    # URI or fallback to empty path
+    if (-not $requestURI) {
+      $stringToSign += [SignatureUtils]::EmptyUriPath
+    } else {
+      $stringToSign += [SignatureUtils]::UrlEncode($requestURI, $true)
+    }
+    $stringToSign += [SignatureUtils]::NewLine
+
+    # Sort and encode parameters
+    $sortedParamMap = [System.Collections.SortedList]::new($parameters, [System.StringComparer]::Ordinal)
+    foreach ($key in $sortedParamMap.Keys) {
+      if ($key -ieq [SignatureUtils]::SIGNATURE_KEYNAME) { continue }
+      $stringToSign += [SignatureUtils]::UrlEncode($key, $false) + [SignatureUtils]::equals + [SignatureUtils]::UrlEncode($sortedParamMap[$key], $false) + [SignatureUtils]::And
+    }
+
+    return $stringToSign.Substring(0, $stringToSign.Length - 1)
+  }
+
+  # URL encode method
+  static [string] UrlEncode([string] $data, [bool] $path) {
+    $encoded = [string]::Empty
+    $unreservedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~" + ($path ? "/" : "")
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($data)
+
+    foreach ($symbol in $bytes) {
+      $char = [char]$symbol
+      if ($unreservedChars.Contains($char)) {
+        $encoded += $char
+      } else {
+        $encoded += "%" + "{0:X2}" -f $symbol
+      }
+    }
+
+    return $encoded
+  }
+
+  # Method to compute the RFC 2104-compliant HMAC signature
+  static [string] sign([string] $data, [string] $key, [string] $signatureMethod) {
+    try {
+      $encoding = [System.Text.ASCIIEncoding]::new()
+      $hmac = [System.Security.Cryptography.HMAC]::Create($signatureMethod)
+      $hmac.Key = $encoding.GetBytes($key)
+      $hmac.Initialize()
+      $dataBytes = $encoding.GetBytes($data)
+      $rawResult = $hmac.ComputeHash($dataBytes)
+      return [Convert]::ToBase64String($rawResult)
+    } catch {
+      throw "Failed to generate signature: $($_.Exception.Message)"
+    }
+  }
+}
+
 class FileMonitor {
   static [bool] $FileClosed = $true
   static [bool] $FileLocked = $false
@@ -1292,7 +1371,7 @@ class CredManaged {
   CredManaged([string]$target, [PSCredential]$PSCredential) {
     ($this.target, $this.UserName, $this.Password) = ($target, $PSCredential.UserName, $PSCredential.Password)
   }
-  [void]Protect() {
+  [void] Protect() {
     $_scope_ = [EncryptionScope]$this.Scope
     $_Props_ = @($this | Get-Member -Force | Where-Object { $_.MemberType -eq 'Property' -and $_.Name -ne 'Scope' } | Select-Object -ExpandProperty Name)
     foreach ($n in $_Props_) {
@@ -1309,13 +1388,13 @@ class CredManaged {
       )
     )
   }
-  [void]UnProtect() {
+  [void] UnProtect() {
     $_scope_ = [EncryptionScope]$this.Scope
     $_Props_ = @($this | Get-Member -Force | Where-Object { $_.MemberType -eq 'Property' -and $_.Name -ne 'Scope' } | Select-Object -ExpandProperty Name)
     foreach ($n in $_Props_) {
       $OBJ = $this.$n
       if ($n.Equals('Password')) {
-        $this.$n = [xconvert]::ToSecurestring([xconvert]::ToUnProtected([encodingBase]::GetString([Base85]::Decode([xconvert]::Tostring($OBJ))), $_scope_));
+        $this.$n = [xconvert]::ToSecurestring([xconvert]::ToUnProtected([xconvert]::ToString([Base85]::Decode([xconvert]::Tostring($OBJ))), $_scope_));
       } else {
         $this.$n = [xconvert]::ToUnProtected($OBJ, $_scope_);
       }
@@ -1326,7 +1405,7 @@ class CredManaged {
       )
     )
   }
-  [void]SaveToVault() {
+  [void] SaveToVault() {
     $CredMan = [CredentialManager]::new();
     [void]$CredMan.SaveCredential($this.target, $this.UserName, $this.Password);
   }
