@@ -1,5 +1,5 @@
 function Get-SID {
-<#
+  <#
 .SYNOPSIS
     To get the SID of a specified domain user passed as either an (email) or (domain,username)
 .DESCRIPTION
@@ -38,68 +38,68 @@ function Get-SID {
     Helpful if you don't have the ActiveDirectory module installed on your system.
 #>
 
-    #region parameter
-    [CmdletBinding(DefaultParameterSetName = 'DomainUser')]
-    [OutputType('string')]
-    Param
-    (
-        [Parameter(ParameterSetName = 'DomainUser')]
-        [string] $Domain = $env:USERDOMAIN,
+  #region parameter
+  [CmdletBinding(DefaultParameterSetName = 'DomainUser')]
+  [OutputType('string')]
+  Param
+  (
+    [Parameter(ParameterSetName = 'DomainUser')]
+    [string] $Domain = $env:USERDOMAIN,
 
-        [Parameter(ParameterSetName = 'DomainUser')]
-        [string] $Username = $env:USERNAME,
+    [Parameter(ParameterSetName = 'DomainUser')]
+    [string] $Username = $env:USERNAME,
 
-        [Parameter(ParameterSetName = 'Email')]
-        [string] $Email,
+    [Parameter(ParameterSetName = 'Email')]
+    [string] $Email,
 
-        [Parameter(ParameterSetName = 'DomainUser')]
-        [Parameter(ParameterSetName = 'Email')]
-        [Alias('IncludeOriginal')]
-        [switch] $IncludeInput
+    [Parameter(ParameterSetName = 'DomainUser')]
+    [Parameter(ParameterSetName = 'Email')]
+    [Alias('IncludeOriginal')]
+    [switch] $IncludeInput
 
-    )
-    #endregion parameter
+  )
+  #endregion parameter
 
-    begin {
-        Write-Invocation $MyInvocation
-        Out-Verbose "ParameterSetName [$($PsCmdlet.ParameterSetName)]"
-    }
+  begin {
+    Write-Invocation $MyInvocation
+    Out-Verbose "ParameterSetName [$($PsCmdlet.ParameterSetName)]"
+  }
 
-    process {
-        switch ($PsCmdlet.ParameterSetName) {
-            'DomainUser' {
-                $ADObj = [System.Security.Principal.NTAccount]::new($Domain, $Username)
-                $SID = $AdObj.Translate([System.Security.Principal.SecurityIdentifier])
-                $ReturnVal = $SID.Value
-                if ($IncludeInput) {
-                    $prop = ([ordered] @{
-                            Domain   = $Domain.ToLower()
-                            UserName = $Username.ToLower()
-                            SID      = $ReturnVal
-                        } )
-                    New-Object -TypeName psobject -Property $prop
-                } else {
-                    Write-Output -InputObject $ReturnVal
-                }
-            }
-            'Email' {
-                $AdObj = [System.Security.Principal.NTAccount]::new($Email)
-                $SID = $AdObj.Translate([System.Security.Principal.SecurityIdentifier])
-                $ReturnVal = $SID.Value
-                if ($IncludeInput) {
-                    $prop = ([ordered] @{
-                            Email = $Email.ToLower()
-                            SID   = $ReturnVal
-                        } )
-                    New-Object -TypeName psobject -Property $prop
-                } else {
-                    Write-Output -InputObject $ReturnVal
-                }
-            }
+  process {
+    switch ($PsCmdlet.ParameterSetName) {
+      'DomainUser' {
+        $ADObj = [System.Security.Principal.NTAccount]::new($Domain, $Username)
+        $SID = $AdObj.Translate([System.Security.Principal.SecurityIdentifier])
+        $ReturnVal = $SID.Value
+        if ($IncludeInput) {
+          $prop = ([ordered] @{
+              Domain   = $Domain.ToLower()
+              UserName = $Username.ToLower()
+              SID      = $ReturnVal
+            } )
+          New-Object -TypeName psobject -Property $prop
+        } else {
+          Write-Output -InputObject $ReturnVal
         }
+      }
+      'Email' {
+        $AdObj = [System.Security.Principal.NTAccount]::new($Email)
+        $SID = $AdObj.Translate([System.Security.Principal.SecurityIdentifier])
+        $ReturnVal = $SID.Value
+        if ($IncludeInput) {
+          $prop = ([ordered] @{
+              Email = $Email.ToLower()
+              SID   = $ReturnVal
+            } )
+          New-Object -TypeName psobject -Property $prop
+        } else {
+          Write-Output -InputObject $ReturnVal
+        }
+      }
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }
