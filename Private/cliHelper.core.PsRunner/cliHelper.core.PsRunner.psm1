@@ -410,7 +410,8 @@ class PsRunner {
     }
     [void]$RunSpace_Setup.Add([string]::Join("`n", $SetModulesPrep))
     $SetFunctionsPrep = foreach ($obj in $Functions) {
-      $FunctionText = Invoke-Expression $('@(${Function:' + $obj.Name + '}.Ast.Extent.Text)')
+      $_src_txt = '@(${Function:' + $obj.Name + '}.Ast.Extent.Text)'
+      $FunctionText = [scriptblock]::Create($_src_txt).InvokeReturnAsIs()
       if ($($FunctionText -split "`n").Count -gt 1) {
         if ($($FunctionText -split "`n")[0] -match "^function ") {
           if ($($FunctionText -split "`n") -match "^'@") {
@@ -461,7 +462,7 @@ class PsRunner {
           foreach ($obj in $RunSpace_Setup) {
             if ([string]::IsNullOrWhiteSpace($obj)) { continue }
             try {
-              Invoke-Expression $obj
+              Invoke-Expression -Command $obj
             } catch {
               throw ("Error {0} `n{1}" -f $_.Exception.Message, $_.ScriptStackTrace)
             }
@@ -588,7 +589,7 @@ public static extern bool IsWow64Process(
 }
 
 function New-Task {
-  [CmdletBinding()]
+  [CmdletBinding()][Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification = "Not changing state")]
   [OutputType([PSCustomObject])]
   [Alias('Create-Task')]
   param (
@@ -1369,7 +1370,7 @@ function Monitor-Process {
   # Get-Process | Monitor-Process
   # .PARAMETER process
   # Process object to monitor
-  [CmdletBinding()]
+  [CmdletBinding()][Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Justification = 'Prefer verb usage')]
   param (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
     [System.Diagnostics.Process]$process
