@@ -1,5 +1,5 @@
 function Resolve-HostName {
-    <#
+  <#
 .SYNOPSIS
     Resolves a hostname to an IPv4 address.
 .DESCRIPTION
@@ -34,65 +34,65 @@ function Resolve-HostName {
     server1      10.100.10.20
     doesnotexist False
 #>
-    [CmdletBinding()]
-    Param (
-        [parameter(ValueFromPipeLine, HelpMessage='Enter the hostname you want to resolve', ValueFromPipeLineByPropertyName, Mandatory)]
-        [Alias('host','ComputerName')]
-        [string[]] $Hostname,
+  [CmdletBinding()]
+  Param (
+    [parameter(ValueFromPipeLine, HelpMessage = 'Enter the hostname you want to resolve', ValueFromPipeLineByPropertyName, Mandatory)]
+    [Alias('host', 'ComputerName')]
+    [string[]] $Hostname,
 
-        [switch] $IncludeInput
-    )
+    [switch] $IncludeInput
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        foreach ($curHost in $Hostname) {
-            if ($curHost -eq '.') {
-                $curHost = $env:computername
-            }
-            $curHost = $curHost.ToLower()
-            try {
-                $ipv4 = ([System.Net.Dns]::GetHostAddresses($curHost) | Where-Object { $_.addressFamily -eq 'InterNetwork' } ).IPAddressToString
-                if ($ipv4 -eq '92.242.140.21') {
-                    $ipv4 = $false
-                }
-                # write-output $ipv4
-                if (Test-IsValidIPv4 -IPAddress $ipv4 -Verbose:$false) {
-                    if ($IncludeInput) {
-                        New-Object -TypeName psobject -Property ([ordered] @{
-                                Hostname = $curHost
-                                IPv4     = $ipv4
-                            })
-                    } else {
-                        Write-Output -InputObject $ipv4
-                    }
-                } else {
-                    if ($IncludeInput) {
-                        New-Object -TypeName psobject -Property ([ordered] @{
-                                Hostname = $curHost
-                                IPv4     = $false
-                            })
-                    } else {
-                        Write-Output -InputObject $false
-                    }
-                }
-            } catch {
-                if ($IncludeInput) {
-                    New-Object -TypeName psobject -Property ([ordered] @{
-                            Hostname = $curHost
-                            IPv4     = $false
-                        })
-                } else {
-                    Write-Output -InputObject $false
-                }
-            }
+  process {
+    foreach ($curHost in $Hostname) {
+      if ($curHost -eq '.') {
+        $curHost = $env:computername
+      }
+      $curHost = $curHost.ToLower()
+      try {
+        $ipv4 = ([System.Net.Dns]::GetHostAddresses($curHost) | Where-Object { $_.addressFamily -eq 'InterNetwork' } ).IPAddressToString
+        if ($ipv4 -eq '92.242.140.21') {
+          $ipv4 = $false
         }
-
+        # write-output $ipv4
+        if (Test-IsValidIPv4 -IPAddress $ipv4 -Verbose:$false) {
+          if ($IncludeInput) {
+            New-Object -TypeName psobject -Property ([ordered] @{
+                Hostname = $curHost
+                IPv4     = $ipv4
+              })
+          } else {
+            Write-Output -InputObject $ipv4
+          }
+        } else {
+          if ($IncludeInput) {
+            New-Object -TypeName psobject -Property ([ordered] @{
+                Hostname = $curHost
+                IPv4     = $false
+              })
+          } else {
+            Write-Output -InputObject $false
+          }
+        }
+      } catch {
+        if ($IncludeInput) {
+          New-Object -TypeName psobject -Property ([ordered] @{
+              Hostname = $curHost
+              IPv4     = $false
+            })
+        } else {
+          Write-Output -InputObject $false
+        }
+      }
     }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  }
+
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }
