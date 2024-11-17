@@ -242,6 +242,51 @@ class NetworkManager {
     Write-Host $re.m -ForegroundColor $re.c
     return $cs
   }
+  static [bool] IsIPv6AddressValid([string]$IP) {
+    $IPv4Regex = '(((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))'
+    $G = '[a-f\d]{1,4}'
+    $Tail = @(":",
+      "(:($G)?|$IPv4Regex)",
+      ":($IPv4Regex|$G(:$G)?|)",
+      "(:$IPv4Regex|:$G(:$IPv4Regex|(:$G){0,2})|:)",
+      "((:$G){0,2}(:$IPv4Regex|(:$G){1,2})|:)",
+      "((:$G){0,3}(:$IPv4Regex|(:$G){1,2})|:)",
+      "((:$G){0,4}(:$IPv4Regex|(:$G){1,2})|:)")
+    [string] $IPv6RegexString = $G
+    $Tail | ForEach-Object { $IPv6RegexString = "${G}:($IPv6RegexString|$_)" }
+    $IPv6RegexString = ":(:$G){0,5}((:$G){1,2}|:$IPv4Regex)|$IPv6RegexString"
+    $IPv6RegexString = $IPv6RegexString -replace '\(' , '(?:' # make all groups non-capturing
+    [regex] $IPv6Regex = $IPv6RegexString
+    if ($IP -imatch "^$IPv6Regex$") {
+      return $true
+    } else {
+      return $false
+    }
+  }
+  static [bool] IsMACAddressValid([string]$mac) {
+    $RegEx = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{2}){6}$"
+    if ($mac -match $RegEx) {
+      return $true
+    } else {
+      return $false
+    }
+  }
+  static [bool] IsSubNetMaskValid([string]$IP) {
+    $RegEx = "^(254|252|248|240|224|192|128).0.0.0$|^255.(254|252|248|240|224|192|128|0).0.0$|^255.255.(254|252|248|240|224|192|128|0).0$|^255.255.255.(255|254|252|248|240|224|192|128|0)$"
+    if ($IP -match $RegEx) {
+      return $true
+    } else {
+      return $false
+    }
+  }
+  static [bool] IsIPv4AddressValid([string]$IP) {
+    $RegEx = "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    if ($IP -match $RegEx) {
+      return $true
+    } else {
+      return $false
+    }
+  }
 }
 
 class RecordBase {
@@ -318,8 +363,8 @@ class RecordBase {
       [ValidateNotNullOrEmpty()][string]$FilePath = [AesGCM]::GetUnResolvedPath($FilePath)
       if (![IO.File]::Exists($FilePath)) { throw [FileNotFoundException]::new("File '$FilePath' was not found") }
       if ([string]::IsNullOrWhiteSpace([AesGCM]::caller)) { [AesGCM]::caller = [RecordBase]::caller }
-      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to decrypt configs" -AsSecureString }else { [xconvert]::ToSecurestring([AesGCM]::GetUniqueMachineId()) })
-      $_ob = [xconvert]::Deserialize([xconvert]::ToDeCompressed([AesGCM]::Decrypt([base85]::Decode([IO.File]::ReadAllText($FilePath)), $pass)))
+      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to decrypt configs" -AsSecureString }else { [AesGCM]::GetUniqueMachineId() | xconvert ToSecurestring })
+      $_ob = [AesGCM]::Decrypt(([IO.File]::ReadAllText($FilePath) | xconvert FromBase85), $pass) | xconvert FromCompressed, FromBytes
       $cfg = [hashtable[]]$_ob.Keys.ForEach({ @{ $_ = $_ob.$_ } })
     } catch {
       throw $_.Exeption
@@ -361,7 +406,7 @@ class RecordBase {
       }
       Remove-Item $outFile.FullName -Force
       if ($UseVerbose) { "[+] FileMonitor Log saved in variable: `$$([fileMonitor]::LogvariableName)" | Write-Host -ForegroundColor Magenta }
-      if ($null -ne $config_ob) { $result = $config_ob.ForEach({ [xconvert]::ToHashTable($_) }) }
+      if ($null -ne $config_ob) { $result = $config_ob.ForEach({ $_ | xconvert ToHashTable }) }
       if ($UseVerbose) { "[+] Edit Config completed." | Write-Host -ForegroundColor Magenta }
     }
     return $result
@@ -370,8 +415,8 @@ class RecordBase {
     $pass = $null;
     try {
       Write-Host "$([RecordBase]::caller) Save records to file: $($this.File) ..." -ForegroundColor Blue
-      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to encrypt configs" -AsSecureString } else { [xconvert]::ToSecurestring([AesGCM]::GetUniqueMachineId()) })
-      $this.LastWriteTime = [datetime]::Now; [IO.File]::WriteAllText($this.File, [Base85]::Encode([AesGCM]::Encrypt($($this.ToByte() | xconvert ToCompressed), $pass)), [System.Text.Encoding]::UTF8)
+      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to encrypt configs" -AsSecureString } else { [AesGCM]::GetUniqueMachineId() | xconvert ToSecurestring })
+      $this.LastWriteTime = [datetime]::Now; [IO.File]::WriteAllText($this.File, ([AesGCM]::Encrypt($($this.ToByte() | xconvert ToCompressed), $pass) | xconvert ToBase85), [System.Text.Encoding]::UTF8)
       Write-Host "$([RecordBase]::caller) Save records " -ForegroundColor Blue -NoNewline; Write-Host "Completed." -ForegroundColor Green
     } catch {
       throw $_.Exeption
@@ -385,7 +430,7 @@ class RecordBase {
     Write-Host "$([RecordBase]::caller) Import records Complete" -ForegroundColor Green
   }
   [byte[]] ToByte() {
-    return [xconvert]::Serialize($this)
+    return $this | xconvert ToBytes
   }
   [string] ToString() {
     $r = $this.ToArray(); $s = ''
