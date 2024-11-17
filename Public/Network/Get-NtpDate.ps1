@@ -1,5 +1,5 @@
 Function Get-NtpDate {
-<#
+  <#
 .SYNOPSIS
     To get the time from an NTP server
 .DESCRIPTION
@@ -17,46 +17,46 @@ Function Get-NtpDate {
 .OUTPUTS
     [datetime]
 #>
-    [CmdletBinding()]
-    Param (
-        [parameter(Mandatory, HelpMessage = 'Add help message for user',
-            ValueFromPipeline,
-            Position = 0)]
-        [Alias('CN', 'Server', 'NtpServer')]
-        [string] $ComputerName,
+  [CmdletBinding()]
+  Param (
+    [parameter(Mandatory, HelpMessage = 'Add help message for user',
+      ValueFromPipeline,
+      Position = 0)]
+    [Alias('CN', 'Server', 'NtpServer')]
+    [string] $ComputerName,
 
-        [int] $Port = 123
-    )
+    [int] $Port = 123
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-        Out-Verbose "Attempting to get time from NTP server $ComputerName"
-        $oldEA = $ErrorActionPreference
-        $ErrorActionPreference = 'Stop'
-    }
+  begin {
+    Write-Invocation $MyInvocation
+    Out-Verbose "Attempting to get time from NTP server $ComputerName"
+    $oldEA = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+  }
 
-    process {
-        $Socket = New-Object -TypeName Net.Sockets.Socket -ArgumentList ( 'InterNetwork', 'Dgram', 'Udp' )
-        $Socket.SendTimeOut = 2000  # ms
-        $Socket.ReceiveTimeOut = 2000  # ms
-        try {
-            $Socket.Connect( $ComputerName, $Port )
-            $NTPData = New-Object -TypeName byte[] -ArgumentList 48
-            $NTPData[0] = 27 # Request header: 00 = No Leap Warning; 011 = Version 3; 011 = Client Mode; 00011011 = 27
-            $Socket.Send(    $NTPData ) | Out-Null
-            $Socket.Receive( $NTPData ) | Out-Null
-            $Seconds = [BitConverter]::ToUInt32( $NTPData[43..40], 0 )
+  process {
+    $Socket = New-Object -TypeName Net.Sockets.Socket -ArgumentList ( 'InterNetwork', 'Dgram', 'Udp' )
+    $Socket.SendTimeOut = 2000  # ms
+    $Socket.ReceiveTimeOut = 2000  # ms
+    try {
+      $Socket.Connect( $ComputerName, $Port )
+      $NTPData = New-Object -TypeName byte[] -ArgumentList 48
+      $NTPData[0] = 27 # Request header: 00 = No Leap Warning; 011 = Version 3; 011 = Client Mode; 00011011 = 27
+      $Socket.Send(    $NTPData ) | Out-Null
+      $Socket.Receive( $NTPData ) | Out-Null
+      $Seconds = [BitConverter]::ToUInt32( $NTPData[43..40], 0 )
             (Get-Date -Date '1/1/1900' ).AddSeconds( $Seconds ).ToLocalTime()
-            Out-Verbose "Successfully received time from NTP $ComputerName"
-        } catch {
-            #get-date -date '1/1/1900'
-            Out-Verbose "Failed receiving time from $ComputerName, server not up, or not running NTP"
-            Write-Error -Message "Could not make an NTP connection over port $Port to $ComputerName"
-        }
+      Out-Verbose "Successfully received time from NTP $ComputerName"
+    } catch {
+      #get-date -date '1/1/1900'
+      Out-Verbose "Failed receiving time from $ComputerName, server not up, or not running NTP"
+      Write-Error -Message "Could not make an NTP connection over port $Port to $ComputerName"
     }
+  }
 
-    end {
-        $ErrorActionPreference = $oldEA
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    $ErrorActionPreference = $oldEA
+    Out-Verbose $fxn "Complete."
+  }
 }
