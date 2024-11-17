@@ -1,5 +1,5 @@
 function Test-IsValidIPv4 {
-<#
+  <#
 .SYNOPSIS
     Verifies if passed parameter is a valid IP v4 address
 .DESCRIPTION
@@ -21,53 +21,53 @@ function Test-IsValidIPv4 {
     invalid      False
 #>
 
-    #region Param
-    [CmdletBinding(ConfirmImpact='None')]
-    [Outputtype('bool')]
-    [alias('Test-IsValidIP')]
-    Param (
-        [parameter(ValueFromPipeLine, ValueFromPipeLineByPropertyName)]
-        [Alias('IP')]
-        [string[]] $IPAddress,
-        [switch] $IncludeInput
-    )
-    #endregion Param
+  #region Param
+  [CmdletBinding(ConfirmImpact = 'None')]
+  [Outputtype('bool')]
+  [alias('Test-IsValidIP')]
+  Param (
+    [parameter(ValueFromPipeLine, ValueFromPipeLineByPropertyName)]
+    [Alias('IP')]
+    [string[]] $IPAddress,
+    [switch] $IncludeInput
+  )
+  #endregion Param
 
-    begin {
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        foreach ($i in $IPAddress) {
-            Try {
-                Out-Verbose "The string being tested if a valid IPv4 address is [$i]"
-                $check = [ipaddress] $i
-                # added check below to cover issue if enter only 3 octets
-                # [ipaddress] "10.1.4" resolves to "10.1.0.4"
-                if ($i -eq $check) {
-                    if ($IncludeInput) {
-                        New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $true })
-                    } else {
-                        Write-Output -InputObject $true
-                    }
-                } else {
-                    if ($IncludeInput) {
-                        New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $false })
-                    } else {
-                        Write-Output -InputObject $false
-                    }
-                }
-            } Catch {
-                if ($IncludeInput) {
-                    New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $false })
-                } else {
-                    Write-Output -InputObject $false
-                }
-            }
+  process {
+    foreach ($i in $IPAddress) {
+      Try {
+        Out-Verbose "The string being tested if a valid IPv4 address is [$i]"
+        $check = [ipaddress] $i
+        # added check below to cover issue if enter only 3 octets
+        # [ipaddress] "10.1.4" resolves to "10.1.0.4"
+        if ($i -eq $check) {
+          if ($IncludeInput) {
+            New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $true })
+          } else {
+            Write-Output -InputObject $true
+          }
+        } else {
+          if ($IncludeInput) {
+            New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $false })
+          } else {
+            Write-Output -InputObject $false
+          }
         }
+      } Catch {
+        if ($IncludeInput) {
+          New-Object -TypeName psobject -Property ([ordered] @{Input = "$i"; Result = $false })
+        } else {
+          Write-Output -InputObject $false
+        }
+      }
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }
