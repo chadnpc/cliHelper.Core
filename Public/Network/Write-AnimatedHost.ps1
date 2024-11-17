@@ -6,9 +6,9 @@
     [Alias('t')][AllowEmptyString()]
     [string]$text,
 
-    [Parameter(Mandatory = $true, Position = 1)]
+    [Parameter(Mandatory = $false, Position = 1)]
     [Alias('f')]
-    [System.ConsoleColor]$foregroundColor
+    [System.ConsoleColor]$foregroundColor = "White"
   )
   process {
     [void][cli]::Write($text, $foregroundColor)

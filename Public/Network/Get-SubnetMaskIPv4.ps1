@@ -1,5 +1,5 @@
 function Get-SubnetMaskIPv4 {
-<#
+  <#
 .SYNOPSIS
     Gets a dotted decimal subnet mask given the number of bits in the mask
 .DESCRIPTION
@@ -35,39 +35,39 @@ function Get-SubnetMaskIPv4 {
     https://www.Google.com
 #>
 
-    [CmdletBinding()]
-    [alias('Get-SubnetMaskIP')]
-    param(
-        [Parameter(ValueFromPipeline,Mandatory,HelpMessage='Enter the length of the subnet mask (1-32). Press ENTER with no other input to finish.')]
-        [Alias('NetworkLength','CIDR')]
-        [ValidateRange(1,32)]
-        [int[]] $Length,
+  [CmdletBinding()]
+  [alias('Get-SubnetMaskIP')]
+  param(
+    [Parameter(ValueFromPipeline, Mandatory, HelpMessage = 'Enter the length of the subnet mask (1-32). Press ENTER with no other input to finish.')]
+    [Alias('NetworkLength', 'CIDR')]
+    [ValidateRange(1, 32)]
+    [int[]] $Length,
 
-        [Alias('IncludeCIDR')]
-        [switch] $IncludeInput
-    )
+    [Alias('IncludeCIDR')]
+    [switch] $IncludeInput
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
+  begin {
+    Write-Invocation $MyInvocation
+  }
+
+  process {
+    foreach ($curLength in $Length) {
+      $MaskBinary = ('1' * $curLength).PadRight(32, '0')
+      $DottedMaskBinary = $MaskBinary -replace '(.{8}(?!\z))', '${1}.'
+      $SubnetMask = ($DottedMaskBinary.Split('.') | ForEach-Object { [Convert]::ToInt32($_, 2) }) -join '.'
+      if ($IncludeInput) {
+        New-Object -TypeName PsObject -Property ([ordered] @{
+            Length     = $curLength
+            SubnetMask = $SubnetMask
+          })
+      } else {
+        Write-Output -InputObject $SubnetMask
+      }
     }
+  }
 
-    process {
-        foreach ($curLength in $Length) {
-            $MaskBinary = ('1' * $curLength).PadRight(32, '0')
-            $DottedMaskBinary = $MaskBinary -replace '(.{8}(?!\z))', '${1}.'
-            $SubnetMask = ($DottedMaskBinary.Split('.') | foreach-object { [Convert]::ToInt32($_, 2) }) -join '.'
-            if ($IncludeInput) {
-                New-Object -typename PsObject -Property ([ordered] @{
-                    Length = $curLength
-                    SubnetMask = $SubnetMask
-                })
-            } else {
-                Write-Output -InputObject $SubnetMask
-            }
-        }
-    }
-
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

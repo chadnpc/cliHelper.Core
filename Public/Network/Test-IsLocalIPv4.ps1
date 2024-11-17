@@ -86,11 +86,9 @@ function Test-IsLocalIPv4 {
         Write-Output -InputObject $Local
       }
     }
-
   }
 
   end {
     Out-Verbose $fxn "Complete."
   }
-
 }

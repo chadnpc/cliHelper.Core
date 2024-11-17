@@ -1,5 +1,5 @@
 function Test-EmailAddress {
-    <#
+  <#
 .SYNOPSIS
     Tests validity if specified string is an email address.
 .DESCRIPTION
@@ -35,37 +35,37 @@ function Test-EmailAddress {
     VERBOSE: Address valid, no guarantee that address [user@gmail.com] exists.
 #>
 
-    [CmdletBinding(ConfirmImpact = 'None')]
-    [Outputtype('bool')]
-    Param (
-        [parameter(Mandatory, HelpMessage = 'Add help message for user', Position = 0, ValueFromPipeLine, ValueFromPipeLineByPropertyName)]
-        [Alias('Address')]
-        [string] $EmailAddress
-    )
+  [CmdletBinding(ConfirmImpact = 'None')]
+  [Outputtype('bool')]
+  Param (
+    [parameter(Mandatory, HelpMessage = 'Add help message for user', Position = 0, ValueFromPipeLine, ValueFromPipeLineByPropertyName)]
+    [Alias('Address')]
+    [string] $EmailAddress
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        Out-Verbose "You entered email address: [$($EmailAddress)]"
-        try {
-            $temp = [System.Net.Mail.MailAddress] $EmailAddress
-            Out-Verbose "Address resolved to: [$($temp.Address)]"
-            if ($temp.Address -ne $EmailAddress) {
-                Out-Verbose "[$($temp.Address)] does not match [$($EmailAddress)]"
-                Write-Output -InputObject $false
-            } else {
-                Out-Verbose "Address valid, no guarantee that address [$($EmailAddress)] exists."
-                Write-Output -InputObject $True
-            }
-        } catch {
-            Out-Verbose  'The address is NOT valid.'
-            Write-Output -InputObject $False
-        }
+  process {
+    Out-Verbose "You entered email address: [$($EmailAddress)]"
+    try {
+      $temp = [System.Net.Mail.MailAddress] $EmailAddress
+      Out-Verbose "Address resolved to: [$($temp.Address)]"
+      if ($temp.Address -ne $EmailAddress) {
+        Out-Verbose "[$($temp.Address)] does not match [$($EmailAddress)]"
+        Write-Output -InputObject $false
+      } else {
+        Out-Verbose "Address valid, no guarantee that address [$($EmailAddress)] exists."
+        Write-Output -InputObject $True
+      }
+    } catch {
+      Out-Verbose 'The address is NOT valid.'
+      Write-Output -InputObject $False
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

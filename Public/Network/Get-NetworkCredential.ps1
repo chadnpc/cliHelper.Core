@@ -1,5 +1,5 @@
 function Get-NetworkCredential {
-<#
+  <#
 .SYNOPSIS
     Returns a [System.Net.NetworkCredential] given a passed [PSCredential] parameter
 .DESCRIPTION
@@ -16,24 +16,24 @@ function Get-NetworkCredential {
     Medium to High impact as this function will return the password, albeit hidden from default view
 #>
 
-    [CmdletBinding(ConfirmImpact = 'Medium')]
-    [OutputType('System.Net.NetworkCredential')]
-    Param
-    (
-        [Parameter(Mandatory, Position = 0)]
-        [PSCredential] $Credential
-    )
-    #endregion parameter
+  [CmdletBinding(ConfirmImpact = 'Medium')]
+  [OutputType('System.Net.NetworkCredential')]
+  Param
+  (
+    [Parameter(Mandatory, Position = 0)]
+    [PSCredential] $Credential
+  )
+  #endregion parameter
 
-    begin {
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        $Credential.GetNetworkCredential()
-    }
+  process {
+    $Credential.GetNetworkCredential()
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

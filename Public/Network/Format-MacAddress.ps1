@@ -1,5 +1,5 @@
 function Format-MacAddress {
-<#
+  <#
 .SYNOPSIS
     Function to cleanup a MACAddress string
 .DESCRIPTION
@@ -89,77 +89,75 @@ function Format-MacAddress {
 
 #>
 
-    #region Parameter
-    [OutputType('String')]
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Position=0,HelpMessage='Please enter a MAC address (12 hex)',Mandatory,ValueFromPipeline)]
-        [Alias('Address')]
-        [String[]] $MacAddress,
+  #region Parameter
+  [OutputType('String')]
+  [CmdletBinding()]
+  param
+  (
+    [Parameter(Position = 0, HelpMessage = 'Please enter a MAC address (12 hex)', Mandatory, ValueFromPipeline)]
+    [Alias('Address')]
+    [String[]] $MacAddress,
 
-        [ValidateSet(':', 'None', '.', '-', ' ', 'Space', ';')]
-        [Alias('Delimiter')]
-        [string] $Separator = ':',
+    [ValidateSet(':', 'None', '.', '-', ' ', 'Space', ';')]
+    [Alias('Delimiter')]
+    [string] $Separator = ':',
 
-        [ValidateSet('Ignore', 'Upper', 'Uppercase', 'Lower', 'Lowercase')]
-        [string] $Case = 'Lower',
+    [ValidateSet('Ignore', 'Upper', 'Uppercase', 'Lower', 'Lowercase')]
+    [string] $Case = 'Lower',
 
-        [ValidateSet(2,3,4,6)]
-        [int] $Split = 2,
+    [ValidateSet(2, 3, 4, 6)]
+    [int] $Split = 2,
 
-        [switch] $IncludeOriginal
-    )
-    #endregion Parameter
+    [switch] $IncludeOriginal
+  )
+  #endregion Parameter
 
-    begin {
-        if ($Separator -eq 'Space') { $Separator = ' ' }
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    if ($Separator -eq 'Space') { $Separator = ' ' }
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        foreach ($Mac in $MacAddress)
-        {
-            $oldMac = $Mac
-            $Mac = $Mac -replace '-', '' #Replace Dash
-            $Mac = $Mac -replace ':', '' #Replace Colon
-            $Mac = $Mac -replace ';', '' #Replace semicolon
-            $Mac = $Mac -replace '/s', '' #Remove whitespace
-            $Mac = $Mac -replace ' ', '' #Remove whitespace
-            $Mac = $Mac -replace '\.', '' #Remove dots
-            $Mac = $Mac.trim() #Remove space at the beginning
-            $Mac = $Mac.trimend() #Remove space at the end
-            switch ($Case) {
-                'Upper'     { $Mac = $mac.toupper() }
-                'Uppercase' { $Mac = $mac.toupper() }
-                'Lower'     { $Mac = $mac.tolower() }
-                'Lowercase' { $Mac = $mac.tolower() }
-                'Ignore'    { }
-                Default     { }
-            }
+  process {
+    foreach ($Mac in $MacAddress) {
+      $oldMac = $Mac
+      $Mac = $Mac -replace '-', '' #Replace Dash
+      $Mac = $Mac -replace ':', '' #Replace Colon
+      $Mac = $Mac -replace ';', '' #Replace semicolon
+      $Mac = $Mac -replace '/s', '' #Remove whitespace
+      $Mac = $Mac -replace ' ', '' #Remove whitespace
+      $Mac = $Mac -replace '\.', '' #Remove dots
+      $Mac = $Mac.trim() #Remove space at the beginning
+      $Mac = $Mac.trimend() #Remove space at the end
+      switch ($Case) {
+        'Upper' { $Mac = $mac.toupper() }
+        'Uppercase' { $Mac = $mac.toupper() }
+        'Lower' { $Mac = $mac.tolower() }
+        'Lowercase' { $Mac = $mac.tolower() }
+        'Ignore' { }
+        Default { }
+      }
 
-            if ($Separator -ne 'None') {
-                switch ($Split) {
-                    2       { $Mac = $Mac -replace '(..(?!$))', "`$1$Separator" }
-                    3       { $Mac = $Mac -replace '(...(?!$))', "`$1$Separator" }
-                    4       { $Mac = $Mac -replace '(....(?!$))', "`$1$Separator" }
-                    6       { $Mac = $Mac -replace '(......(?!$))', "`$1$Separator" }
-                    default { $Mac = $Mac -replace '(..(?!$))', "`$1$Separator" }
-                }
-            }
-
-            if ( -not ($IncludeOriginal) ) {
-                write-output -InputObject $Mac
-            } else {
-                $prop = ([ordered] @{ OriginalMac = $oldMac ; FormattedMac = $mac   })
-                $obj = new-object -TypeName psobject -Property $prop
-                write-output -InputObject $obj
-            }
+      if ($Separator -ne 'None') {
+        switch ($Split) {
+          2 { $Mac = $Mac -replace '(..(?!$))', "`$1$Separator" }
+          3 { $Mac = $Mac -replace '(...(?!$))', "`$1$Separator" }
+          4 { $Mac = $Mac -replace '(....(?!$))', "`$1$Separator" }
+          6 { $Mac = $Mac -replace '(......(?!$))', "`$1$Separator" }
+          default { $Mac = $Mac -replace '(..(?!$))', "`$1$Separator" }
         }
-    } #EndBlock Process
+      }
 
-    end {
-        Out-Verbose $fxn "Complete."
+      if ( -not ($IncludeOriginal) ) {
+        Write-Output -InputObject $Mac
+      } else {
+        $prop = ([ordered] @{ OriginalMac = $oldMac ; FormattedMac = $mac })
+        $obj = New-Object -TypeName psobject -Property $prop
+        Write-Output -InputObject $obj
+      }
     }
+  } #EndBlock Process
 
-} #EndFunction Format-MacAddress
+  end {
+    Out-Verbose $fxn "Complete."
+  }
+}

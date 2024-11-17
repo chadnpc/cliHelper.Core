@@ -1,5 +1,5 @@
 ﻿function Enable-AutoRoutingPAC {
-    <#
+  <#
     .SYNOPSIS
         A short one-line action-based description, e.g. 'Tests if a function is valid'
     .DESCRIPTION
@@ -12,34 +12,32 @@
         Test-MyTestFunction -Verbose
         Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines
     #>
-    [CmdletBinding()]
-    param (
+  [CmdletBinding()]
+  param (
 
-    )
+  )
 
-    begin {
-        class shExpMatch {
-            shExpMatch() {}
-            shExpMatch($h0st, $url) {
-                # do sruff here
-            }
-        }
-        function FindProxyForURL($url, $h0st) {
-            if ([shExpMatch]::New((Get-Host), "*.i2p")) {
-                return "SOCKS5 127.0.0.1:4447";
-            }
-            if ([shExpMatch]::New((Get-Host), "*.onion")) {
-                return "SOCKS5 127.0.0.1:9050";
-            }
-            return "DIRECT";
-        }
+  begin {
+    class shExpMatch {
+      shExpMatch() {}
+      shExpMatch($h0st, $url) {
+        # do sruff here
+      }
     }
-
-    process {
-
+    function FindProxyForURL($url, $h0st) {
+      if ([shExpMatch]::New((Get-Host), "*.i2p")) {
+        return "SOCKS5 127.0.0.1:4447";
+      }
+      if ([shExpMatch]::New((Get-Host), "*.onion")) {
+        return "SOCKS5 127.0.0.1:9050";
+      }
+      return "DIRECT";
     }
+  }
 
-    end {
+  process {
+  }
 
-    }
+  end {
+  }
 }

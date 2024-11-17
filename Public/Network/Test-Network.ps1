@@ -1,5 +1,5 @@
 function Test-Network {
-    <#
+  <#
 .SYNOPSIS
     Wrapper function for Get-IpRange, Test-ConnectionAsync, and Get-DNSHostEntryAsync to give summary table of ip addresses that either resolve to a host name or respond to a ping
 .DESCRIPTION
@@ -19,45 +19,45 @@ function Test-Network {
     10.100.40.6 server-101875.contosco.com Success
 #>
 
-    [cmdletbinding()]
-    param(
-        [Parameter(Mandatory,HelpMessage='Please enter a network in CIDR format (ex. 192.168.1.0/24)', Position = 0, ValueFromPipeline)]
-        [string[]] $Subnet
-    )
+  [cmdletbinding()]
+  param(
+    [Parameter(Mandatory, HelpMessage = 'Please enter a network in CIDR format (ex. 192.168.1.0/24)', Position = 0, ValueFromPipeline)]
+    [string[]] $Subnet
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-    }
+  begin {
+    Write-Invocation $MyInvocation
+  }
 
-    process {
-        foreach ($curSubnet in $Subnet) {
-            Out-Verbose "Getting ip addresses in range [$curSubnet]"
-            $net = Get-IpRange -Subnet $curSubnet -Verbose:$false
-            Out-Verbose "Testing connectivity to [$($net.count)] ip addresses in range [$curSubnet]"
-            $result = Test-ConnectionAsync -ComputerName $net -Timeout 5000 -ErrorAction SilentlyContinue  -Verbose:$false |
-            Select-Object -Property @{Name = 'IpAddress'; Expr = { $_.ComputerName } }, @{Name = 'ComputerName'; Expr = { $null } }, Result
-            Out-Verbose "Getting host names to [$($net.count)] ip addresses in range [$curSubnet]"
-            $Name = Get-DNSHostEntryAsync -ComputerName $net -ErrorAction SilentlyContinue  -Verbose:$false
-            Out-Verbose 'Consolidating data'
-            foreach ($curResult in $Result) {
-                $tmp = $Name | Where-Object { $_.ComputerName -eq $curResult.IpAddress }
-                if ($tmp) {
-                    if ($tmp.Result -eq 'No such host is known') {
-                        $curResult.ComputerName = 'UNKNOWN'
-                    } else {
-                        $curResult.ComputerName = $tmp.Result.ToLower()
-                    }
-                }
-                if ($curResult.Result -ne 'Success') {
-                    $curResult.Result = 'TimeOut'
-                }
-            }
-            $result = $result | Where-Object { -not ($_.ComputerName -eq 'UNKNOWN' -and $_.Result -eq 'TimeOut') }
-            Write-Output -InputObject $result
+  process {
+    foreach ($curSubnet in $Subnet) {
+      Out-Verbose "Getting ip addresses in range [$curSubnet]"
+      $net = Get-IpRange -Subnet $curSubnet -Verbose:$false
+      Out-Verbose "Testing connectivity to [$($net.count)] ip addresses in range [$curSubnet]"
+      $result = Test-ConnectionAsync -ComputerName $net -Timeout 5000 -ErrorAction SilentlyContinue -Verbose:$false |
+        Select-Object -Property @{Name = 'IpAddress'; Expr = { $_.ComputerName } }, @{Name = 'ComputerName'; Expr = { $null } }, Result
+      Out-Verbose "Getting host names to [$($net.count)] ip addresses in range [$curSubnet]"
+      $Name = Get-DNSHostEntryAsync -ComputerName $net -ErrorAction SilentlyContinue -Verbose:$false
+      Out-Verbose 'Consolidating data'
+      foreach ($curResult in $Result) {
+        $tmp = $Name | Where-Object { $_.ComputerName -eq $curResult.IpAddress }
+        if ($tmp) {
+          if ($tmp.Result -eq 'No such host is known') {
+            $curResult.ComputerName = 'UNKNOWN'
+          } else {
+            $curResult.ComputerName = $tmp.Result.ToLower()
+          }
         }
+        if ($curResult.Result -ne 'Success') {
+          $curResult.Result = 'TimeOut'
+        }
+      }
+      $result = $result | Where-Object { -not ($_.ComputerName -eq 'UNKNOWN' -and $_.Result -eq 'TimeOut') }
+      Write-Output -InputObject $result
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

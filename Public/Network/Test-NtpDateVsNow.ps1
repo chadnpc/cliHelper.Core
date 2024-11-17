@@ -1,5 +1,5 @@
 function Test-NtpDateVsNow {
-<#
+  <#
 .SYNOPSIS
     To test whether local time and NTP time fall within a particular tolerance
 .DESCRIPTION
@@ -39,55 +39,55 @@ function Test-NtpDateVsNow {
     http://www.pool.ntp.org/en/
 #>
 
-    #region Parameters
-    [CmdletBinding(ConfirmImpact = 'None')]
-    [OutputType('bool')]
-    Param (
-        # Specifies the NTP server to communicate with
-        [parameter(ValueFromPipeline, Position = 0)]
-        [Alias('NtpServer', 'CN', 'Server')]
-        [string] $ComputerName = (Get-ADDomainController).HostName,
+  #region Parameters
+  [CmdletBinding(ConfirmImpact = 'None')]
+  [OutputType('bool')]
+  Param (
+    # Specifies the NTP server to communicate with
+    [parameter(ValueFromPipeline, Position = 0)]
+    [Alias('NtpServer', 'CN', 'Server')]
+    [string] $ComputerName = (Get-ADDomainController).HostName,
 
-        # Specifies the acceptable number of seconds difference between local and NTP time
-        [parameter(ValueFromPipeLineByPropertyName)]
-        [ValidateRange(1, 3600)]
-        [int] $Tolerance = 300,
+    # Specifies the acceptable number of seconds difference between local and NTP time
+    [parameter(ValueFromPipeLineByPropertyName)]
+    [ValidateRange(1, 3600)]
+    [int] $Tolerance = 300,
 
-        [switch] $IncludeInput
-    )
-    #endregion Parameters
+    [switch] $IncludeInput
+  )
+  #endregion Parameters
 
-    begin {
-        Write-Invocation $MyInvocation
+  begin {
+    Write-Invocation $MyInvocation
+  }
+
+  process {
+    $Ntp = Get-NtpDate -ComputerName ($ComputerName)
+    Out-Verbose "Getting NTP time from $ComputerName and time is $Ntp"
+    $Now = Get-Date
+    Out-Verbose "Getting local time and time is $Now"
+    $AbsDiff = [math]::Abs(($ntp - $now).TotalSeconds)
+    Out-Verbose "There are $AbsDiff seconds difference between times, and comparing to $Tolerance is"
+    if ($AbsDiff -gt $Tolerance) {
+      $ReturnVal = $false
+    } else {
+      $ReturnVal = $true
     }
-
-    process {
-        $Ntp = Get-NtpDate -ComputerName ($ComputerName)
-        Out-Verbose "Getting NTP time from $ComputerName and time is $Ntp"
-        $Now = Get-Date
-        Out-Verbose "Getting local time and time is $Now"
-        $AbsDiff = [math]::Abs(($ntp - $now).TotalSeconds)
-        Out-Verbose "There are $AbsDiff seconds difference between times, and comparing to $Tolerance is"
-        if ($AbsDiff -gt $Tolerance) {
-            $ReturnVal = $false
-        } else {
-            $ReturnVal = $true
-        }
-        if ($IncludeInput) {
-            New-Object -TypeName psobject -Property ([ordered] @{
-                LocalDate = $Now
-                NTPDate = $Ntp
-                Tolerance = $Tolerance
-                Difference = $AbsDiff
-                Result = $ReturnVal
-                NTPServer = $ComputerName
-            })
-        } else {
-            Write-Output -InputObject $ReturnVal
-        }
+    if ($IncludeInput) {
+      New-Object -TypeName psobject -Property ([ordered] @{
+          LocalDate  = $Now
+          NTPDate    = $Ntp
+          Tolerance  = $Tolerance
+          Difference = $AbsDiff
+          Result     = $ReturnVal
+          NTPServer  = $ComputerName
+        })
+    } else {
+      Write-Output -InputObject $ReturnVal
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

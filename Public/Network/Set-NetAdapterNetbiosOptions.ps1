@@ -1,5 +1,5 @@
 function Set-NetAdapterNetbiosOptions {
-    <#
+  <#
     .SYNOPSIS
         Configures Netbios on a Network Adapter.
 
@@ -20,50 +20,49 @@ function Set-NetAdapterNetbiosOptions {
         Setting value for this resource which should be one of
         the following: Default, Enable, Disable
     #>
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [System.Object]
-        $NetworkAdapterObject,
+  [CmdletBinding()]
+  param
+  (
+    [Parameter(Mandatory = $true)]
+    [System.Object]
+    $NetworkAdapterObject,
 
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $InterfaceAlias,
+    [Parameter(Mandatory = $true)]
+    [System.String]
+    $InterfaceAlias,
 
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Default', 'Enable', 'Disable')]
-        [System.String]
-        $Setting
-    )
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('Default', 'Enable', 'Disable')]
+    [System.String]
+    $Setting
+  )
 
-    Write-Verbose -Message ($script:localizedData.SetNetBiosMessage -f $InterfaceAlias, $Setting)
+  Write-Verbose -Message ($script:localizedData.SetNetBiosMessage -f $InterfaceAlias, $Setting)
 
-    # Only IPEnabled interfaces can be configured via SetTcpipNetbios method.
-    if ($NetworkAdapterObject.IPEnabled) {
-        $result = $NetworkAdapterObject |
-        Invoke-CimMethod `
-            -MethodName SetTcpipNetbios `
-            -ErrorAction Stop `
-            -Arguments @{
-            TcpipNetbiosOptions = [uint32][NetBiosSetting]::$Setting.value__
-        }
+  # Only IPEnabled interfaces can be configured via SetTcpipNetbios method.
+  if ($NetworkAdapterObject.IPEnabled) {
+    $result = $NetworkAdapterObject |
+      Invoke-CimMethod `
+        -MethodName SetTcpipNetbios `
+        -ErrorAction Stop `
+        -Arguments @{
+        TcpipNetbiosOptions = [uint32][NetBiosSetting]::$Setting.value__
+      }
 
-        if ($result.ReturnValue -ne 0) {
-            New-InvalidOperationException `
-                -Message ($script:localizedData.FailedUpdatingNetBiosError -f $InterfaceAlias, $result.ReturnValue, $Setting)
-        }
+    if ($result.ReturnValue -ne 0) {
+      New-InvalidOperationException `
+        -Message ($script:localizedData.FailedUpdatingNetBiosError -f $InterfaceAlias, $result.ReturnValue, $Setting)
     }
-    else {
-        <#
+  } else {
+    <#
             IPEnabled=$false can only be configured via registry
             this satisfies disabled and disconnected states
         #>
-        $setItemPropertyParameters = @{
-            Path  = "$($script:hklmInterfacesPath)\Tcpip_$($NetworkAdapterObject.SettingID)"
-            Name  = 'NetbiosOptions'
-            Value = [NetBiosSetting]::$Setting.value__
-        }
-        $null = Set-ItemProperty @setItemPropertyParameters
+    $setItemPropertyParameters = @{
+      Path  = "$($script:hklmInterfacesPath)\Tcpip_$($NetworkAdapterObject.SettingID)"
+      Name  = 'NetbiosOptions'
+      Value = [NetBiosSetting]::$Setting.value__
     }
+    $null = Set-ItemProperty @setItemPropertyParameters
+  }
 }

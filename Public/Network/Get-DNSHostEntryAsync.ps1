@@ -1,5 +1,5 @@
 function Get-DNSHostEntryAsync {
-<#
+  <#
 .SYNOPSIS
     Performs a DNS Get Host asynchronously
 .DESCRIPTION
@@ -24,65 +24,65 @@ function Get-DNSHostEntryAsync {
     * slight formatting changes
 #>
 
-    #Requires -Version 3.0
-    [OutputType('Net.AsyncGetHostResult')]
-    [CmdletBinding(ConfirmImpact='None')]
-    Param (
-        [parameter(ValueFromPipeline)]
-        [Alias('CN', 'Server')]
-        [string[]] $ComputerName
-    )
+  #Requires -Version 3.0
+  [OutputType('Net.AsyncGetHostResult')]
+  [CmdletBinding(ConfirmImpact = 'None')]
+  Param (
+    [parameter(ValueFromPipeline)]
+    [Alias('CN', 'Server')]
+    [string[]] $ComputerName
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-        $Computerlist = New-Object -TypeName System.Collections.ArrayList
-        if ($PSBoundParameters.ContainsKey('ComputerName')) {
-            $null = $Computerlist.AddRange($ComputerName)
+  begin {
+    Write-Invocation $MyInvocation
+    $Computerlist = New-Object -TypeName System.Collections.ArrayList
+    if ($PSBoundParameters.ContainsKey('ComputerName')) {
+      $null = $Computerlist.AddRange($ComputerName)
+    } else {
+      $IsPipeline = $True
+    }
+  }
+
+  process {
+    If ($IsPipeline) {
+      $null = $Computerlist.Add($ComputerName)
+    }
+  }
+
+  end {
+    $Task = ForEach ($Computer in $Computername) {
+      If (([bool]($Computer -as [ipaddress]))) {
+        [pscustomobject] @{
+          Computername = $Computer
+          Task         = [system.net.dns]::GetHostEntryAsync($Computer)
+        }
+      } Else {
+        [pscustomobject] @{
+          Computername = $Computer
+          Task         = [system.net.dns]::GetHostAddressesAsync($Computer)
+        }
+      }
+    }
+    try {
+      $null = [Threading.Tasks.Task]::WaitAll($Task.Task)
+    } catch { Write-Error -Message 'Error encountered' }
+    $Task | ForEach-Object {
+      $Result = if ($_.Task.IsFaulted) {
+        $_.Task.Exception.InnerException.Message
+      } else {
+        if ($_.Task.Result.IPAddressToString) {
+          $_.Task.Result.IPAddressToString
         } else {
-            $IsPipeline = $True
+          $_.Task.Result.HostName
         }
+      }
+      $Object = [pscustomobject] @{
+        ComputerName = $_.Computername
+        Result       = $Result
+      }
+      $Object.pstypenames.insert(0, 'Net.AsyncGetHostResult')
+      $Object
     }
-
-    process {
-        If ($IsPipeline) {
-            $null = $Computerlist.Add($ComputerName)
-        }
-    }
-
-    end {
-        $Task = ForEach ($Computer in $Computername) {
-            If (([bool]($Computer -as [ipaddress]))) {
-                [pscustomobject] @{
-                    Computername = $Computer
-                    Task = [system.net.dns]::GetHostEntryAsync($Computer)
-                }
-            } Else {
-                [pscustomobject] @{
-                    Computername = $Computer
-                    Task = [system.net.dns]::GetHostAddressesAsync($Computer)
-                }
-            }
-        }
-        try {
-            $null = [Threading.Tasks.Task]::WaitAll($Task.Task)
-        } catch { Write-Error -Message 'Error encountered'}
-        $Task | ForEach-Object {
-            $Result = if ($_.Task.IsFaulted) {
-                $_.Task.Exception.InnerException.Message
-            } else {
-                if ($_.Task.Result.IPAddressToString) {
-                    $_.Task.Result.IPAddressToString
-                } else {
-                    $_.Task.Result.HostName
-                }
-            }
-            $Object = [pscustomobject] @{
-                ComputerName = $_.Computername
-                Result = $Result
-            }
-            $Object.pstypenames.insert(0,'Net.AsyncGetHostResult')
-            $Object
-        }
-        Out-Verbose $fxn "Complete."
-    }
+    Out-Verbose $fxn "Complete."
+  }
 }

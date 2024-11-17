@@ -1,5 +1,5 @@
 function Get-MacVendor {
-    <#
+  <#
     .SYNOPSIS
         Resolve MacAddresses To Vendors
     .DESCRIPTION
@@ -31,45 +31,45 @@ function Get-MacVendor {
         * added example
         * moved validate regex further into script and used Format-MacAddress to clean up addresses that don't match pattern like those seen on switches (ex. 34fcb9-c08bce)
     #>
-    [CmdletBinding()]
-    param(
-        [Parameter (Mandatory, HelpMessage = 'Please enter a 12 character hexadecimal MAC address optionally delimited with either : or -')]
-        #[ValidatePattern('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$')]
-        [string[]] $MacAddress
-    )
+  [CmdletBinding()]
+  param(
+    [Parameter (Mandatory, HelpMessage = 'Please enter a 12 character hexadecimal MAC address optionally delimited with either : or -')]
+    #[ValidatePattern('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$')]
+    [string[]] $MacAddress
+  )
 
-    begin {
-        Write-Invocation $MyInvocation
-        $CurrentMac = 0
-    }
+  begin {
+    Write-Invocation $MyInvocation
+    $CurrentMac = 0
+  }
 
-    process {
-        foreach ($Mac in $MacAddress) {
-            if ($Mac -notmatch '^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$') {
-                $Mac = Format-MacAddress -MacAddress $Mac -Case Upper
-            }
-            $CurrentMac++
-            Write-Progress -Activity "Resoving MacAddress : $Mac" -Status "$CurrentMac of $($MacAddress.Count)" -PercentComplete (($CurrentMac / $MacAddress.Count) * 100)
-            try {
-                Out-Verbose  'Sending Request to https://api.macvendors.com/'
-                Invoke-RestMethod -Method Get -Uri https://api.macvendors.com/$Mac -ErrorAction SilentlyContinue | ForEach-Object {
-                    New-Object -Type pscustomobject -prop ([ordered] @{
-                            MacAddress = $Mac
-                            Vendor     = $_
-                        })
-                }
-                Start-Sleep -Milliseconds 1000
-            } catch {
-                New-Object -Type pscustomobject -prop ([ordered] @{
-                        MacAddress = $Mac
-                        Vendor     = 'UNKNOWN'
-                    })
-                Start-Sleep -Milliseconds 1000
-            }
+  process {
+    foreach ($Mac in $MacAddress) {
+      if ($Mac -notmatch '^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$') {
+        $Mac = Format-MacAddress -MacAddress $Mac -Case Upper
+      }
+      $CurrentMac++
+      Write-Progress -Activity "Resoving MacAddress : $Mac" -Status "$CurrentMac of $($MacAddress.Count)" -PercentComplete (($CurrentMac / $MacAddress.Count) * 100)
+      try {
+        Out-Verbose 'Sending Request to https://api.macvendors.com/'
+        Invoke-RestMethod -Method Get -Uri https://api.macvendors.com/$Mac -ErrorAction SilentlyContinue | ForEach-Object {
+          New-Object -Type pscustomobject -prop ([ordered] @{
+              MacAddress = $Mac
+              Vendor     = $_
+            })
         }
+        Start-Sleep -Milliseconds 1000
+      } catch {
+        New-Object -Type pscustomobject -prop ([ordered] @{
+            MacAddress = $Mac
+            Vendor     = 'UNKNOWN'
+          })
+        Start-Sleep -Milliseconds 1000
+      }
     }
+  }
 
-    end {
-        Out-Verbose $fxn "Complete."
-    }
+  end {
+    Out-Verbose $fxn "Complete."
+  }
 }

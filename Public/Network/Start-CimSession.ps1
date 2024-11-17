@@ -1,5 +1,5 @@
 ﻿function Start-CimSession {
-    <#
+  <#
 .SYNOPSIS
     Creates CimSessions to remote computer(s), automatically determining if the WSMAN
     or Dcom protocol should be used.
@@ -30,55 +30,55 @@
     Website: http://mikefrobbins.com
     Twitter: @mikefrobbins
 #>
-    [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [ValidateNotNullorEmpty()]
-        [string[]]$ComputerName = $env:COMPUTERNAME,
+  [CmdletBinding(SupportsShouldProcess)]
+  param(
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+    [ValidateNotNullorEmpty()]
+    [string[]]$ComputerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
-        [System.Management.Automation.Credential()]
-        [PSCredential]$Credential = [System.Management.Automation.PSCredential]::Empty
-    )
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
+    [System.Management.Automation.Credential()]
+    [PSCredential]$Credential = [System.Management.Automation.PSCredential]::Empty
+  )
 
-    BEGIN {
-        ## Requires -Version 3.0
-        $Opt = New-CimSessionOption -Protocol Dcom
+  BEGIN {
+    ## Requires -Version 3.0
+    $Opt = New-CimSessionOption -Protocol Dcom
 
-        $SessionParams = @{
-            ErrorAction = 'Stop'
-        }
-
-        If ($PSBoundParameters['Credential']) {
-            $SessionParams.Credential = $Credential
-        }
+    $SessionParams = @{
+      ErrorAction = 'Stop'
     }
 
-    PROCESS {
-        foreach ($Computer in $ComputerName) {
-            $SessionParams.ComputerName = $Computer
-
-            if ((Test-WSMan -ComputerName $Computer -ErrorAction SilentlyContinue).productversion -match 'Stack: ([3-9]|[1-9][0-9]+)\.[0-9]+') {
-                try {
-                    Write-Verbose -Message "Attempting to connect to $Computer using the WSMAN protocol."
-                    New-CimSession @SessionParams
-                } catch {
-                    Write-Warning -Message "Unable to connect to $Computer using the WSMAN protocol. Verify your credentials and try again."
-                }
-            }
-
-            else {
-                $SessionParams.SessionOption = $Opt
-
-                try {
-                    Write-Verbose -Message "Attempting to connect to $Computer using the DCOM protocol."
-                    New-CimSession @SessionParams
-                } catch {
-                    Write-Warning -Message "Unable to connect to $Computer using the WSMAN or DCOM protocol. Verify $Computer is online and try again."
-                }
-
-                $SessionParams.Remove('SessionOption')
-            }
-        }
+    If ($PSBoundParameters['Credential']) {
+      $SessionParams.Credential = $Credential
     }
+  }
+
+  PROCESS {
+    foreach ($Computer in $ComputerName) {
+      $SessionParams.ComputerName = $Computer
+
+      if ((Test-WSMan -ComputerName $Computer -ErrorAction SilentlyContinue).productversion -match 'Stack: ([3-9]|[1-9][0-9]+)\.[0-9]+') {
+        try {
+          Write-Verbose -Message "Attempting to connect to $Computer using the WSMAN protocol."
+          New-CimSession @SessionParams
+        } catch {
+          Write-Warning -Message "Unable to connect to $Computer using the WSMAN protocol. Verify your credentials and try again."
+        }
+      }
+
+      else {
+        $SessionParams.SessionOption = $Opt
+
+        try {
+          Write-Verbose -Message "Attempting to connect to $Computer using the DCOM protocol."
+          New-CimSession @SessionParams
+        } catch {
+          Write-Warning -Message "Unable to connect to $Computer using the WSMAN or DCOM protocol. Verify $Computer is online and try again."
+        }
+
+        $SessionParams.Remove('SessionOption')
+      }
+    }
+  }
 }
