@@ -1,6 +1,5 @@
 function Show-Tree {
   [CmdletBinding(DefaultParameterSetName = "Path")]
-  [alias("pstree", "shtree")]
   Param(
     [Parameter(Position = 0,
       ParameterSetName = "Path",

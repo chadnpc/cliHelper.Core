@@ -7,7 +7,7 @@ function Remove-Credential {
     .NOTES
         This function is supported on windows only
     .LINK
-        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
+        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.Core.xcrypt/cliHelper.Core.xcrypt.psm1
     .EXAMPLE
         Remove-Credential -Verbose
     #>

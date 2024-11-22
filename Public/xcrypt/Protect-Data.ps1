@@ -7,7 +7,7 @@ function Protect-Data {
     .NOTES
         Information or caveats about the function e.g. 'This function is not fully supported in Linux'
     .LINK
-        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
+        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.Core.xcrypt/cliHelper.Core.xcrypt.psm1
     .EXAMPLE
         [securestring]$sec = Protect-Data $(Read-Host -AsSecurestring -Prompt 'Secret msg')
     #>
