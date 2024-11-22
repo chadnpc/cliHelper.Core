@@ -9,7 +9,7 @@
 @{
   # Script module or binary module file associated with this manifest.
   RootModule            = 'cliHelper.core.psm1'
-  ModuleVersion         = '0.1.0'
+  ModuleVersion         = '<ModuleVersion>'
 
   # Supported PSEditions
   # CompatiblePSEditions = @()
@@ -24,7 +24,7 @@
   CompanyName           = 'alainQtec'
 
   # Copyright statement for this module
-  Copyright             = 'Copyright © 2024 Alain Herve. All rights reserved.'
+  Copyright             = 'Copyright © <Year> Alain Herve. All rights reserved.'
 
   # Description of the functionality provided by this module
   Description           = 'PowerShell module to improve core devx'
@@ -54,9 +54,7 @@
   FunctionsToExport     = @(
     '<FunctionsToExport>'
   )
-  RequiredModules       = @(
-    'PsImport'
-  )
+  RequiredModules       = @()
   CmdletsToExport       = '*'
   VariablesToExport     = '*'
   AliasesToExport       = '*'
