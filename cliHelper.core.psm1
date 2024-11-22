@@ -475,6 +475,7 @@ $typestoExport = @(
   [Gist],
   [X509],
   [RSA],
+  [K3Y],
   [cli]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
@@ -506,7 +507,7 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
 
 $scripts = @();
 $Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
-$scripts += Get-ChildItem "$PSScriptRoot/Private" -Filter "*.ps1" -Recurse -Recurse -ErrorAction SilentlyContinue
+$scripts += Get-ChildItem "$PSScriptRoot/Private" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
 $scripts += $Public
 
 foreach ($file in $scripts) {
