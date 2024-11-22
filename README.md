@@ -1,4 +1,4 @@
-# [clihelper.core](https://www.powershellgallery.com/packages/cliHelper.core)
+# [![clihelper.core](https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a)](https://www.powershellgallery.com/packages/cliHelper.core)
 
 🔥 Blazingly fast PowerShell thingy that stonks up your terminal game.
 
