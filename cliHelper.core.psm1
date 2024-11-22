@@ -515,7 +515,7 @@ foreach ($file in $scripts) {
     if ([string]::IsNullOrWhiteSpace($file.fullname)) { continue }
     . "$($file.fullname)"
   } Catch {
-    Write-Warning "Failed to import function $($file.BaseName): $_"
+    Write-Warning "$($file.FullName) Failed to import function $($file.BaseName): $_"
     $host.UI.WriteErrorLine($_)
   }
 }
