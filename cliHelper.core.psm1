@@ -460,10 +460,21 @@ class RecordBase {
 
 # Types that will be available to users when they import the module.
 $typestoExport = @(
-  [ProgressUtil],
+  [CredentialManager],
   [NetworkManager],
+  [ProgressUtil],
+  [FileMonitor],
+  [FileCryptr],
   [PsRunner],
+  [GitHub],
+  [xcrypt],
   [cliart],
+  [AesGCM],
+  [AesCng],
+  [AesCtr],
+  [Gist],
+  [X509],
+  [RSA],
   [cli]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
@@ -491,11 +502,13 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
   foreach ($Type in $typestoExport) {
     $TypeAcceleratorsClass::Remove($Type.FullName)
   }
-}.GetNewClosure();
+}.GetNewClosure()
 
-$Private = Get-ChildItem ([IO.Path]::Combine($PSScriptRoot, 'Private')) -Filter "*.ps1" -ErrorAction SilentlyContinue
-$Public = Get-ChildItem ([IO.Path]::Combine($PSScriptRoot, 'Public')) -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
-foreach ($file in $($Public + $Private)) {
+$Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
+$FunctionsToExport = $Public.BaseName
+$FunctionsToExport += ((Get-ChildItem "$PSScriptRoot/Private" -Filter "*.psm1" -Recurse).FullName | Get-Function).Name
+
+foreach ($file in $Public) {
   Try {
     if ([string]::IsNullOrWhiteSpace($file.fullname)) { continue }
     . "$($file.fullname)"
@@ -506,8 +519,8 @@ foreach ($file in $($Public + $Private)) {
 }
 
 $Param = @{
-  Function = $Public.BaseName
+  Function = $FunctionsToExport
   Cmdlet   = '*'
-  # Alias    = '*'
+  Alias    = '*'
 }
 Export-ModuleMember @Param -Verbose
