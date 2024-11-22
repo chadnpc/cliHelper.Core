@@ -11,7 +11,7 @@ function Write-Log {
   #     $Date = (Get-Date).ToString('yyyyMMdd-HHmm')
   #     $LogFolder = New-Item -ItemType Directory ".\Logs" -Force
   #     $Log = New-Item -ItemType File "$LogFolder\$($Setup.BaseName)-$Date.log" -Force
-  #     Write-Log -Message "Error during install - exit code: $ExitCode" -Type 3 -Component $Computer -LogFile $Log
+  #     Write-Log -m "Error during install - exit code: $ExitCode" -Type 3 -f $Log
   #
   # .EXAMPLE
   #     throw [InvalidVersionException]::new("The input version is invalid, too long or too short.") | Write-Log
@@ -24,8 +24,8 @@ function Write-Log {
   param (
     # The error message.
     [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ParameterSetName = 'Message')]
-    [System.String[]]
-    $Message,
+    [System.String[]][Alias('m')]
+    $Messages,
 
     # The error record containing an exception to log.
     [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ParameterSetName = 'ErrorRecord')]
@@ -34,10 +34,16 @@ function Write-Log {
 
     [Parameter(Mandatory = $false, Position = 1, ParameterSetName = '__AllParameterSets')]
     [ValidateSet('INFO', 'ERROR', 'FATAL', 'DEBUG', 'SUCCESS', 'WARNING', 'VERBOSE')]
-    [string]$LogLevel = 'INFO',
+    [Alias('l')][string]
+    $LogLevel = 'INFO',
 
     [Parameter(Mandatory = $false, Position = 2, ParameterSetName = '__AllParameterSets')]
-    [string]$LogFile
+    [Alias('f')][string]
+    $LogFile,
+
+    [Parameter(Mandatory = $false, Position = 3, ParameterSetName = '__AllParameterSets')]
+    [Alias('s')][switch]
+    $Success
   )
 
   DynamicParam {
@@ -66,6 +72,7 @@ function Write-Log {
     $PsCmdlet.MyInvocation.BoundParameters.GetEnumerator() | ForEach-Object { New-Variable -Name $_.Key -Value $_.Value -ea 'SilentlyContinue' }
     $s = [string][char]32
     $lvlNames = @(); @('INFO', 'ERROR', 'FATAL', 'DEBUG', 'SUCCESS', 'WARNING', 'VERBOSE') | ForEach-Object { $lvlNames += @{$_ = "[$($_.ToString().ToUpper())]" + $s * (9 - $_.length) } }
+    $colors = @{ true = 'Green'; false = 'Red' }
   }
 
   process {
@@ -91,6 +98,7 @@ function Write-Log {
     }
     $TimeStamp = $(Get-Date -Format o).Replace('.', ' ').Replace('-', '/').Replace('T', ' ').Split('+')[0]; $TimeStamp += $s * (30 - $TimeStamp.length)
     $LogMessage = $TimeStamp + $($lvlNames."$LogLevel") + $ProcessName + $s + "PID=${PID} TID=$TID" + $Component + $Message
+    Write-Host $LogMessage -f $colors.($Success.IsPresent)
     if ($PSCmdlet.ShouldProcess("$fxn Writing log entry to $($LogFile.FullName) ...", "$($LogFile.FullName)", "WriteLogEntry")) {
       $FSProps = [PSCustomObject]@{
         Path     = $LogFile.FullName
