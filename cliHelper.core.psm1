@@ -506,7 +506,8 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
 
 $Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
 $FunctionsToExport = $Public.BaseName
-$FunctionsToExport += ((Get-ChildItem "$PSScriptRoot/Private" -Filter "*.psm1" -Recurse).FullName | Get-Function).Name
+# get functions whose name has no undescore in it
+$FunctionsToExport += ((Get-ChildItem "$PSScriptRoot/Private" -Filter "*.psm1" -Recurse).FullName | Get-Function).Name.Where({ !$_.Contains('_') })
 
 foreach ($file in $Public) {
   Try {
