@@ -272,8 +272,6 @@ ServiceFabricBackup/
 *.bim_*.settings
 *.rptproj.rsuser
 *- [Bb]ackup.rdl
-*- [Bb]ackup ([0-9]).rdl
-*- [Bb]ackup ([0-9][0-9]).rdl
 
 # Microsoft Fakes
 FakesAssemblies/
@@ -400,15 +398,14 @@ FodyWeavers.xsd
 
 # dotEnv
 .env
+.env.local
 
 # Generated files:
 BuildOutput/
 LocalPSRepo/
-sc1.tmptest..ps1
 Tests/results.xml
 Tests/Resources/
 Tests/PsImport.Module.Tests.ps1
 Tests/PsImport.Features.Tests.ps1
 Tests/PsImport.Intergration.Tests.ps1
 Tests/Resources/Test-GitHubScript.ps1
-.env
