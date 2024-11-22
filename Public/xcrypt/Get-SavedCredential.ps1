@@ -7,7 +7,7 @@ function Get-SavedCredential {
     .NOTES
         This function is not supported on Linux
     .LINK
-        https://github.com/alainQtec/cliHelper.Core
+        https://github.com/alainQtec/cliHelper.core
     .EXAMPLE
         Get-SavedCredential 'My App'
         Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines

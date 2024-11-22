@@ -1,17 +1,17 @@
-# [![cliHelper.Core](https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a)](https://www.powershellgallery.com/packages/cliHelper.Core)
+# [![cliHelper.core](https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a)](https://www.powershellgallery.com/packages/cliHelper.core)
 
 🔥 Blazingly fast PowerShell thingy that stonks up your terminal game.
 
 ## usage
 
 ```PowerShell
-Install-Module cliHelper.Core
+Install-Module cliHelper.core
 ```
 
 then
 
 ```PowerShell
-Import-Module cliHelper.Core
+Import-Module cliHelper.core
 # go wild!
 ('🐴' | Out-Unicorn) -eq '🦄' # true
 # the function above is for entertainment but it showcases alot of animations,

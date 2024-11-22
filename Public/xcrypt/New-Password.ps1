@@ -6,7 +6,7 @@ function New-Password {
         Creates a password containing minimum of 9 characters, 1 lowercase, 1 uppercase, 1 numeric, and 1 special character.
         Can not exceed 999 characters
     .LINK
-        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.Core.xcrypt/cliHelper.Core.xcrypt.psm1
+        https://github.com/alainQtec/cliHelper.core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
     .EXAMPLE
         New-Password
         Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines

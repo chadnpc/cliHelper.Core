@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    cliHelper.Core buildScript
+    cliHelper.core buildScript
 .DESCRIPTION
-    A custom Psake buildScript for the module cliHelper.Core.
+    A custom Psake buildScript for the module cliHelper.core.
 .LINK
-    https://github.com/alainQtec/cliHelper.Core/blob/main/build.ps1
+    https://github.com/alainQtec/cliHelper.core/blob/main/build.ps1
 .EXAMPLE
     Running ./build.ps1 will only "Init, Compile & Import" the module; That's it, no tests.
     To run tests Use:
@@ -252,7 +252,7 @@ Begin {
           try {
             [ValidateNotNullOrWhiteSpace()][string]$versionToDeploy = $versionToDeploy.ToString()
             $manifest = Import-PowerShellDataFile -Path $([Environment]::GetEnvironmentVariable($env:RUN_ID + 'PSModuleManifest'))
-            $latest_Github_release = Invoke-WebRequest "https://api.github.com/repos/alainQtec/cliHelper.Core/releases/latest" | ConvertFrom-Json
+            $latest_Github_release = Invoke-WebRequest "https://api.github.com/repos/alainQtec/cliHelper.core/releases/latest" | ConvertFrom-Json
             $latest_Github_release = [PSCustomObject]@{
               name = $latest_Github_release.name
               ver  = [version]::new($latest_Github_release.tag_name.substring(1))

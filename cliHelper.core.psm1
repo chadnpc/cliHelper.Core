@@ -1,7 +1,7 @@
 using namespace System.IO
-using module Private/cliHelper.Core.help
-using module Private/cliHelper.Core.xcrypt
-using module Private/cliHelper.Core.PsRunner
+using module Private/cliHelper.core.help
+using module Private/cliHelper.core.xcrypt
+using module Private/cliHelper.core.PsRunner
 Import-Module cliHelper.xconvert
 
 # xconvert

@@ -7,7 +7,7 @@ function Show-SavedCredentials {
     .NOTES
         This function is supported on windows only
     .LINK
-        https://github.com/alainQtec/cliHelper.Core
+        https://github.com/alainQtec/cliHelper.core
     .EXAMPLE
         Show-SavedCredentials
     #>

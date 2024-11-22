@@ -7,7 +7,7 @@ function UnProtect-Data {
     .NOTES
         Information or caveats about the function e.g. 'This function is not fully supported in Linux'
     .LINK
-        https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.Core.xcrypt/cliHelper.Core.xcrypt.psm1
+        https://github.com/alainQtec/cliHelper.core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
     .EXAMPLE
         UnProtect-Data $secretMsg
     #>
