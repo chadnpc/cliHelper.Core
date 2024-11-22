@@ -504,12 +504,12 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
   }
 }.GetNewClosure()
 
+$scripts = @();
 $Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
-$FunctionsToExport = $Public.BaseName
-# get functions whose name has no undescore in it
-$FunctionsToExport += ((Get-ChildItem "$PSScriptRoot/Private" -Filter "*.psm1" -Recurse).FullName | Get-Function).Name.Where({ !$_.Contains('_') })
+$scripts += Get-ChildItem "$PSScriptRoot/Private" -Filter "*.ps1" -Recurse -Recurse -ErrorAction SilentlyContinue
+$scripts += $Public
 
-foreach ($file in $Public) {
+foreach ($file in $scripts) {
   Try {
     if ([string]::IsNullOrWhiteSpace($file.fullname)) { continue }
     . "$($file.fullname)"
@@ -520,7 +520,7 @@ foreach ($file in $Public) {
 }
 
 $Param = @{
-  Function = $FunctionsToExport
+  Function = $Public.BaseName
   Cmdlet   = '*'
   Alias    = '*'
 }
