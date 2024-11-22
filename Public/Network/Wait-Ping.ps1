@@ -58,7 +58,7 @@
       }
       Write-Verbose -Message "[$($ComputerName)] is now offline. We waited $([Math]::Round($timer.Elapsed.TotalSeconds, 0)) seconds";
     } else {
-      while (-not (Test-Connection -ComputerName $ComputerName -Quiet -Count 1)) {
+      while (!(Test-Connection -ComputerName $ComputerName -Quiet -Count 1)) {
         Write-Verbose -Message "Waiting for [$($ComputerName)] to become pingable..."
         if ($timer.Elapsed.TotalSeconds -ge $Timeout) {
           throw "Timeout exceeded. Giving up on ping availability to [$ComputerName]";

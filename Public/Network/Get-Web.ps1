@@ -387,7 +387,7 @@
       $script:CachedProgressId = $ProgressIdentifier
     }
 
-    if (-not $script:CachedProgressId) {
+    if (!$script:CachedProgressId) {
       $script:CachedProgressId = Get-Random
 
     }
@@ -396,7 +396,7 @@
 
   process {
     if ($psCmdlet.ParameterSetName -eq 'WGet') {
-      if (-not $script:cachedContentTypes) {
+      if (!$script:cachedContentTypes) {
         $script:cachedContentTypes = @{}
         $ctKey = [Microsoft.Win32.Registry]::ClassesRoot.OpenSubKey("MIME\Database\Content Type")
         $ctKey.GetSubKeyNames() |
@@ -459,7 +459,7 @@
         }
 
 
-        if (-not $pageHtml) {
+        if (!$pageHtml) {
           continue
         }
 
@@ -518,13 +518,13 @@
         }
 
         foreach ($href in $potentialHrefs) {
-          if (-not $href) { continue }
+          if (!$href) { continue }
           if ($href -like "$relativeRoot*") {
-            if (-not $followMeDown.Contains($href) -and -not $pagedata.Contains($href)) {
+            if (!$followMeDown.Contains($href) -and !$pagedata.Contains($href)) {
               $null = $followMeDown.Enqueue($href)
             }
-          } if (-not ([uri]$href).DnsSafeHost) {
-            if (-not $followMeDown.Contains($href) -and -not $pagedata.Contains($href)) {
+          } if (!([uri]$href).DnsSafeHost) {
+            if (!$followMeDown.Contains($href) -and !$pagedata.Contains($href)) {
 
               if ($href -like "/*") {
                 $null = $followMeDown.Enqueue(([uri]$currentRoot).Scheme + "://" + $hostname + $href)
@@ -587,10 +587,10 @@
       $fullUrl = "$url"
 
 
-      if ($Data -and -not $RequestBody) {
+      if ($Data -and !$RequestBody) {
         $RequestBody = $data -join '&'
         $UseWebRequest = $true
-        if (-not $psBoundParameters.Method) {
+        if (!$psBoundParameters.Method) {
           $Method = 'POST'
         }
       }
@@ -645,14 +645,14 @@
 
 
         $RequestTime = [DateTime]::Now
-        if (-not $HideProgress) {
+        if (!$HideProgress) {
           Write-Progress "Sending Web Request" $url -Id $progressId
         }
         $requestStream = try {
 
 
           if ($Parameter -and ('PUT', 'POST' -contains $method)) {
-            if (-not $RequestBody) {
+            if (!$RequestBody) {
               $RequestBody = ""
             }
 
@@ -672,7 +672,7 @@
 
           if ($requestBody) {
             if ($RequestBody -is [string]) {
-              if (-not $ContentType) {
+              if (!$ContentType) {
                 $req.ContentType = 'application/x-www-form-urlencoded'
               }
               $bytes = [Text.Encoding]::UTF8.GetBytes($RequestBody)
@@ -682,7 +682,7 @@
               $requestStream.Write($postDataBytes, 0, $postDataBytes.Count)
               $requestStream.Close()
             } elseif ($RequestBody -as [byte[]]) {
-              if (-not $ContentType) {
+              if (!$ContentType) {
                 $req.ContentType = 'application/x-www-form-urlencoded'
               }
               $postDataBytes = $RequestBody -as [Byte[]]
@@ -690,7 +690,7 @@
 
               $requestStream = $req.GetRequestStream()
               if ($req.ContentLength -gt 256kb) {
-                if (-not $HideProgress) {
+                if (!$HideProgress) {
                   Write-Progress "Uploading" $url -Id $progressId
                 }
                 #$requestStream.Write($postDataBytes, 0, $postDataBytes.Count)
@@ -709,13 +709,13 @@
                   }
                   $requestStream.Write($arr, 0 , $arr.Length)
 
-                  if (-not $HideProgress) {
+                  if (!$HideProgress) {
                     $perc = $chunkCount * 100 / $chunkTotal
                     Write-Progress "Uploading" $url -Id $progressId -PercentComplete $perc
                   }
                 }
 
-                if (-not $HideProgress) {
+                if (!$HideProgress) {
                   Write-Progress "Uploading" $url -Id $progressId -Completed
                 }
               } else {
@@ -739,7 +739,7 @@
           }
         } catch {
 
-          if (-not ($_.Exception.HResult -eq -2146233087)) {
+          if (!($_.Exception.HResult -eq -2146233087)) {
             $_ | Write-Error
             return
           }
@@ -762,7 +762,7 @@
             $streamIn = New-Object IO.StreamReader $ex.Exception.InnerException.Response.GetResponseStream()
             $strResponse = $streamIn.ReadToEnd();
             $streamIn.Close();
-            if (-not $UseErrorAsResult) {
+            if (!$UseErrorAsResult) {
               Write-Error $strResponse
               return
             } else {
@@ -830,7 +830,7 @@
                 break
               }
               $TotalRead += $bytesRead
-              if (($byteBuffer.Length -gt 256kb) -and -not $hideProgress) {
+              if (($byteBuffer.Length -gt 256kb) -and !$hideProgress) {
 
                 $perc = ($totalRead / $byteBuffer.Length) * 100
                 Write-Progress "Downloading" $url -Id $progressId -PercentComplete $perc
@@ -840,7 +840,7 @@
               }
             }
 
-            if (-not $HideProgress) {
+            if (!$HideProgress) {
               $perc = $totalRead / $byteBuffer.Length
               Write-Progress "Download Completed" $url -Id $progressId -Complete
             }
@@ -876,7 +876,7 @@
       }
       # $req.CookieContainer
 
-      if (! $html -and -not $UseWebRequest) {
+      if (! $html -and !$UseWebRequest) {
         if ($WebCredential) {
           $xmlHttp.open("$Method",
             $fullUrl,
@@ -893,7 +893,7 @@
           }
         }
 
-        if (-not $HideProgress) {
+        if (!$HideProgress) {
           Write-Progress "Sending Web Request" $url -Id $progressId
         }
 
@@ -932,7 +932,7 @@
         }
         $requestTime = [Datetime]::Now
         while ($xmlHttp.ReadyState -ne 4) {
-          if (-not $hideProgress) {
+          if (!$hideProgress) {
             Write-Progress "Waiting for response" $url -Id $progressId
           }
           Start-Sleep -Milliseconds 10
@@ -942,7 +942,7 @@
 
       $ResponseTime = [Datetime]::Now - $RequestTime
 
-      if (-not $hideProgress) {
+      if (!$hideProgress) {
         Write-Progress "Response received" $url -Id $progressId
       }
       if ($xmlHttp.Status -like "2*") {
@@ -974,7 +974,7 @@
 
       if ($AsByte) {
         return $xmlHttp.ResponseBody
-      } elseif (-not $UseWebRequest) {
+      } elseif (!$UseWebRequest) {
         $html = $xmlHttp.ResponseText
       }
     } elseif ($psCmdlet.ParameterSetName -eq 'FileName') {
@@ -985,7 +985,7 @@
       $html = [IO.File]::ReadAllText($ExecutionContext.SessionState.Path.GetResolvedPSPathFromPSPath($FileName))
     }
 
-    if (-not $html) { return }
+    if (!$html) { return }
 
     if ($AsXml) {
       $xHtml = [xml]$html
@@ -1005,7 +1005,7 @@
     if ($AsJson) {
       <#$msJsonConvert = Get-Command ConvertFrom-Json -Module Microsoft* -ErrorAction SilentlyContinue
 
-            if (-not $msJsonConvert) {
+            if (!$msJsonConvert) {
 
             }#>
       $jsResult = Convert-Json -json $html #-FullLanguage
@@ -1020,7 +1020,7 @@
       return
     }
 
-    if (-not $Tag -or $AsMicrodata) {
+    if (!$Tag -or $AsMicrodata) {
       if ($AsByte) {
         return [Text.Encoding]::Unicode.GetBytes($html)
       }
@@ -1037,7 +1037,7 @@
       } while ($l -ne -1)
     }
 
-    if ($tag -and -not ($AsMicrodata -or $OpenGraph -or $MetaData -or $ItemType)) {
+    if ($tag -and !($AsMicrodata -or $OpenGraph -or $MetaData -or $ItemType)) {
       $tryToBalance = $true
 
       if ($openGraph -or $metaData) {
@@ -1045,7 +1045,7 @@
       }
 
       foreach ($htmlTag in $tag) {
-        if (-not $htmlTag) { continue }
+        if (!$htmlTag) { continue }
         $r = New-Object Text.RegularExpressions.Regex ('</' + $htmlTag + '>'), ("Singleline", "IgnoreCase")
         $endTags = @($r.Matches($html))
         if ($textInTag) {
@@ -1063,7 +1063,7 @@
           $startTags = New-Object Collections.Stack
 
           foreach ($t in $allTags) {
-            if (-not $t) { continue }
+            if (!$t) { continue }
 
             if ($t.Value -like "<$htmlTag*") {
               $startTags.Push($t)
@@ -1076,7 +1076,7 @@
         } else {
           # Unbalanced document, use start tags only and make sure that the tag is self-enclosed
           foreach ($_ in $startTags) {
-            if (-not $_) { continue }
+            if (!$_) { continue }
             $t = "$($_.Value)"
             if ($t -notlike "*/>") {
               $t = $t.Insert($t.Length - 1, "/")
@@ -1089,7 +1089,7 @@
 
         $tagCount = 0
         foreach ($t in $tagText) {
-          if (-not $t) { continue }
+          if (!$t) { continue }
           $tagStartIndex = $tagStarts[$tagCount]
           $tagCount++
           # Correct HTML which doesn't quote the attributes so it can be coerced into XML
@@ -1217,7 +1217,7 @@
           $mt.Xml.name
         }
 
-        if (-not $PropName) { continue }
+        if (!$PropName) { continue }
         $noteProperty = New-Object Management.Automation.PSNoteProperty $propName, $mt.Xml.Content
         if ($outputObject.psobject.properties[$propName]) {
           $outputObject.psobject.properties[$propName].Value =
@@ -1232,7 +1232,7 @@
         }
       }
       $null = $OutputObject.pstypenames.add('HTMLMetaData')
-      if ($psBoundParameters.Url -and -not $outputObject.psobject.properties['Url']) {
+      if ($psBoundParameters.Url -and !$outputObject.psobject.properties['Url']) {
         Add-Member -InputObject $outputObject NoteProperty Url $psboundParameters.Url
       }
       if ($OutputResponseHeader) {
@@ -1242,7 +1242,7 @@
       }
     } elseif ($AsMicrodata -or $ItemType) {
       $getInnerScope = {
-        if (-not $knownTags[$htmlTag]) {
+        if (!$knownTags[$htmlTag]) {
           $r = New-Object Text.RegularExpressions.Regex ('<[/]*' + $htmlTag + '[^>]*>'), ("Singleline", "IgnoreCase")
           $Tags = @($r.Matches($html))
           $knownTags[$htmlTag] = $tags
@@ -1295,7 +1295,7 @@
       $itemScopeFinder = New-Object Text.RegularExpressions.Regex ('<(?<t>\w*)[^>]*itemscope[^>]*>'), ("Singleline", "IgnoreCase")
       $knownTags = @{}
       foreach ($matchInfo in $itemScopeFinder.Matches($html)) {
-        if (-not $matchInfo) { continue }
+        if (!$matchInfo) { continue }
         $htmlTag = $matchInfo.Groups[1].Value
         $targetValue = $matchInfo.Groups[0].Value
         $targetIndex = $matchInfo.Groups[0].Index
@@ -1307,7 +1307,7 @@
         $outputObject = New-Object PSObject
         $outputObject.pstypenames.clear()
         foreach ($itemTypeName in $myTagAsXml.firstchild.itemtype -split " ") {
-          if (-not $itemTypeName) { continue }
+          if (!$itemTypeName) { continue }
           $null = $outputObject.pstypenames.add($itemTypeName)
         }
 
@@ -1318,7 +1318,7 @@
               $true
             }
           }
-          if (-not $found) {
+          if (!$found) {
             continue
           }
         }
@@ -1347,12 +1347,12 @@
           }
           . $getInnerScope
           $propName = $myTagAsXml.firstchild.itemprop
-          if (-not $propName) {
+          if (!$propName) {
             Write-Debug "No Property Name, Skipping"
             continue
           }
 
-          if (-not $innerScope) {
+          if (!$innerScope) {
 
             # get the data from one of a few properties.  href, src, or content
             $fixedXml = try { [xml]($itemPropMatch.Groups[0].Value.TrimEnd("/>") + "/>") } catch { }
@@ -1439,7 +1439,7 @@
 
           #$propName, $propValue
         }
-        if ($psBoundParameters.Url -and -not $outputObject.psobject.properties['Url']) {
+        if ($psBoundParameters.Url -and !$outputObject.psobject.properties['Url']) {
           Add-Member -InputObject $outputObject NoteProperty Url $psboundParameters.Url
         }
 

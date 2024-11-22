@@ -25,11 +25,11 @@
       try {
         # HttpClient is used vs Invoke-WebRequest in order to support Nano Server which doesn't support the Invoke-WebRequest cmdlet.
         try { Add-Type -Assembly System.Net.Http | Out-Null } catch { $null }
-        if (-not $ProxyAddress) {
+        if (!$ProxyAddress) {
           try {
             # Despite no proxy being explicitly specified, we may still be behind a default proxy
             $DefaultProxy = [System.Net.WebRequest]::DefaultWebProxy;
-            if ($DefaultProxy -and (-not $DefaultProxy.IsBypassed($Uri))) {
+            if ($DefaultProxy -and (!$DefaultProxy.IsBypassed($Uri))) {
               if ($null -ne $DefaultProxy.GetProxy($Uri)) {
                 $ProxyAddress = $DefaultProxy.GetProxy($Uri).OriginalString
               } else {
@@ -77,7 +77,7 @@
         $Task = $HttpClient.GetAsync("$UriWithCredential", $completionOption).ConfigureAwait("false");
         $Response = $Task.GetAwaiter().GetResult();
 
-        if (($null -eq $Response) -or ((-not $HeaderOnly) -and (-not ($Response.IsSuccessStatusCode)))) {
+        if (($null -eq $Response) -or ((!$HeaderOnly) -and (!($Response.IsSuccessStatusCode)))) {
           # The feed credential is potentially sensitive info. Do not log FeedCredential to console output.
           $DownloadException = [System.Exception] "Unable to download $Uri."
           if ($null -ne $Response) {

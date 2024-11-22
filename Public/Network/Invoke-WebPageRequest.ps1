@@ -285,7 +285,7 @@ if ($PSVersionTable.PSVersion.Major -ge 6) {
             ${SkipHeaderValidation})
 
         begin {
-            if ($Credential -and (-not ($Authentication))) {
+            if ($Credential -and (!($Authentication))) {
                 $PSBoundParameters["Authentication"] = "Basic"
             }
             if ($InputFile) {

@@ -78,7 +78,7 @@ function Get-NetHelp {
     $HelpObject.Constructors += $ConstructorObject
   }
 
-  foreach ($NetMethod in $Type.DeclaredMethods | Where-Object { $_.IsPublic -and (-not $_.IsSpecialName) } | Group-Object Name) {
+  foreach ($NetMethod in $Type.DeclaredMethods | Where-Object { $_.IsPublic -and (!$_.IsSpecialName) } | Group-Object Name) {
     $MethodObject = New-Object PSObject -Property @{
       Name        = $NetMethod.Name
       Static      = $NetMethod.Group[0].IsStatic
@@ -305,7 +305,7 @@ function Get-CimHelp {
             if ($Paragraph.Text) { $Paragraph }
           })
       }
-      $MethodObject.Parameters.Values | Where-Object { -not $_.In } | ForEach-Object {
+      $MethodObject.Parameters.Values | Where-Object { !$_.In } | ForEach-Object {
         Write-Progress "Retrieving Parameter Descriptions" -PercentComplete ($i / $total * 100); $i++
 
         $ParameterHelp = $MethodHelp.OutParameters.Properties | Where-Object Name -EQ $_.Name
@@ -395,7 +395,7 @@ function Get-HelpLocation {
     }
   }
 
-  # if (-not $Online.IsPresent)
+  # if (!$Online.IsPresent)
   # {
   #     # try localized location (typically newer than base framework dir)
   #     $frameworkDir = "${env:windir}\Microsoft.NET\framework\v2.0.50727"

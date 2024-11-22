@@ -147,7 +147,7 @@ function Format-MacAddress {
         }
       }
 
-      if ( -not ($IncludeOriginal) ) {
+      if ( !($IncludeOriginal) ) {
         Write-Output -InputObject $Mac
       } else {
         $prop = ([ordered] @{ OriginalMac = $oldMac ; FormattedMac = $mac })

@@ -15,7 +15,7 @@ function Get-AkaMSDownloadLink([string]$Channel, [string]$Quality, [bool]$Intern
     $akaMsLink += "/internal"
   }
   $akaMsLink += "/$Channel"
-  if (-not [string]::IsNullOrEmpty($Quality)) {
+  if (![string]::IsNullOrEmpty($Quality)) {
     $akaMsLink += "/$Quality"
   }
   $akaMsLink += "/$Product-win-$Architecture.zip"
@@ -53,7 +53,7 @@ function Get-AkaMSDownloadLink([string]$Channel, [string]$Quality, [bool]$Intern
         Out-Verbose "The link '$akaMsLink' is not valid: failed to get redirect location."
         return $null
       }
-    } elseif ((($Response.StatusCode -lt 300) -or ($Response.StatusCode -ge 400)) -and (-not [string]::IsNullOrEmpty($akaMsDownloadLink))) {
+    } elseif ((($Response.StatusCode -lt 300) -or ($Response.StatusCode -ge 400)) -and (![string]::IsNullOrEmpty($akaMsDownloadLink))) {
       # Redirections have ended.
       return $akaMsDownloadLink
     }
@@ -81,7 +81,7 @@ function Get-NormalizedProduct([string]$Runtime) {
 function Get-AkaMsLink-And-Version([string] $NormalizedChannel, [string] $NormalizedQuality, [bool] $Internal, [string] $ProductName, [string] $Architecture) {
   $AkaMsDownloadLink = Get-AkaMSDownloadLink -Channel $NormalizedChannel -Quality $NormalizedQuality -Internal $Internal -Product $ProductName -Architecture $Architecture
   if ([string]::IsNullOrEmpty($AkaMsDownloadLink)) {
-    if (-not [string]::IsNullOrEmpty($NormalizedQuality)) {
+    if (![string]::IsNullOrEmpty($NormalizedQuality)) {
       # if quality is specified - exit with error - there is no fallback approach
       Out-Verbose $fxn "Failed to locate the latest version in the channel '$NormalizedChannel' with '$NormalizedQuality' quality for '$ProductName', os: 'win', architecture: '$Architecture'."
       Out-Verbose $fxn "Refer to: https://aka.ms/dotnet-os-lifecycle for information on .NET Core support."

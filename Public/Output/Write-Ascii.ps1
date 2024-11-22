@@ -73,7 +73,7 @@
       }
 
       # Now this sure was a simple way of making sure all letter align tidily without changing a lot of code!
-      if (-not $Compress) { $MaxLines = 6 }
+      if (!$Compress) { $MaxLines = 6 }
 
       $LetterWidthArray = $LetterArray | ForEach-Object {
         $Letter = [String] $_
@@ -273,7 +273,7 @@
     }
 
     # Get ASCII art letters/characters and data from XML. Make it persistent for the module.
-    if (-not (Get-Variable -EA SilentlyContinue -Scope Script -Name Letters)) {
+    if (!(Get-Variable -EA SilentlyContinue -Scope Script -Name Letters)) {
       $script:Letters = @{}
       Get-LetterXML
     }

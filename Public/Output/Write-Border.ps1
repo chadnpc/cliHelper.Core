@@ -1,6 +1,5 @@
 function Write-Border {
   [CmdletBinding(DefaultParameterSetName = "single")]
-  [alias('ab')]
   [OutputType([System.String])]
 
   Param(
@@ -72,7 +71,7 @@ function Write-Border {
       #test if text block is already using ANSI
       if ($ansiopen.IsMatch($TextBlock)) {
         # "Text block contains ANSI sequences"
-        $txtarray | ForEach-Object -Begin { $tempLen = @() } -Process {
+        $txtarray | ForEach-Object -Begin { Set-Variable -Name tempLen -Value @() } -Process {
           $adjust = 0
           $adjust += ($ansiopen.matches($_) | Measure-Object length -Sum).sum
           $adjust += ($ansiend.matches($_) | Measure-Object length -Sum).sum
@@ -81,7 +80,6 @@ function Write-Border {
           $tempLen += $_.length - $adjust
         }
         $len = $tempLen | Sort-Object -Descending | Select-Object -First 1
-
       } elseif ($PSBoundparameters.ContainsKey("ANSIText")) {
         # "Using ANSIText for the block"
         $txtarray = $textblock.split("`n").Trim() | ForEach-Object { "{0}{1}{2}" -f $PSBoundParameters.ANSIText, $_, $AnsiClear }

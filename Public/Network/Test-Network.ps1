@@ -52,7 +52,7 @@ function Test-Network {
           $curResult.Result = 'TimeOut'
         }
       }
-      $result = $result | Where-Object { -not ($_.ComputerName -eq 'UNKNOWN' -and $_.Result -eq 'TimeOut') }
+      $result = $result | Where-Object { !($_.ComputerName -eq 'UNKNOWN' -and $_.Result -eq 'TimeOut') }
       Write-Output -InputObject $result
     }
   }

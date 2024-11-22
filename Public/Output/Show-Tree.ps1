@@ -146,7 +146,7 @@ function Show-Tree {
             "file" {
               #only use map items with regex patterns
               foreach ($item in ($script:PSAnsiFileMap | Where-Object Pattern)) {
-                if ($name -match $item.pattern -AND (-not $done)) {
+                if ($name -match $item.pattern -AND (!$done)) {
                   Write-Output "$indentStr$($item.ansi)$($Name)$([char]0x1b)[0m"
                   #set a flag indicating we've made a match to stop looking
                   $done = $True
@@ -183,7 +183,7 @@ function Show-Tree {
 
         for ($i = 0; $i -lt $props.Count; $i++) {
           $prop = $props[$i]
-          $IsLast[-1] = ($i -eq $props.count - 1) -and (-Not $HasChildItems)
+          $IsLast[-1] = ($i -eq $props.count - 1) -and (!$HasChildItems)
           $showParams = @{
             Name   = $prop.Name
             Value  = $prop.Value

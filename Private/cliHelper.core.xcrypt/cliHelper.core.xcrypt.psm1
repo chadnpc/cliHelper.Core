@@ -927,7 +927,7 @@ class SignatureUtils {
 
   # Method to calculate the string to sign for SignatureVersion 2
   static [string] calculateStringToSignV2([hashtable] $parameters, [string] $httpMethod, [string] $hostHeader, [string] $requestURI) {
-    if (-not $httpMethod) { throw "HttpMethod cannot be null" }
+    if (!$httpMethod) { throw "HttpMethod cannot be null" }
 
     $stringToSign = "$httpMethod$([SignatureUtils]::NewLine)"
 
@@ -935,7 +935,7 @@ class SignatureUtils {
     $stringToSign += ($hostHeader.ToLower() + [SignatureUtils]::NewLine)
 
     # URI or fallback to empty path
-    if (-not $requestURI) {
+    if (!$requestURI) {
       $stringToSign += [SignatureUtils]::EmptyUriPath
     } else {
       $stringToSign += [SignatureUtils]::UrlEncode($requestURI, $true)
@@ -1258,7 +1258,7 @@ class OTPKIT {
     return $?
   }
   static [bool] VerifyHOTP([string]$otp, [int]$phone, [string]$hash) {
-    if (-not $hash -match "\.") {
+    if (!$hash -match "\.") {
       return $false
     }
 
@@ -1280,13 +1280,13 @@ class OTPKIT {
 
   static [string] ParseOtpUrl([string]$otpURL) {
     # $otpURL can be decrypted text
-    if (-not [System.Uri]::IsWellFormedUriString("$otpURL", "Absolute") -or $otpURL -notmatch "^otpauth://") { Write-Host "The decrypted text is not a valid OTP URL" "Error" ; $script:FileBrowser.Dispose() ; exit 1 }
+    if (![System.Uri]::IsWellFormedUriString("$otpURL", "Absolute") -or $otpURL -notmatch "^otpauth://") { Write-Host "The decrypted text is not a valid OTP URL" "Error" ; $script:FileBrowser.Dispose() ; exit 1 }
     $parseOtpUrl = [scriptblock]::Create("[System.Web.HttpUtility]::ParseQueryString(([uri]::new('$otpURL')).Query)").Invoke()
     $otpType = $([uri]$otpURL).Host
     if ($otpType -eq "hotp") { Write-Warning "TOTP is only supported" }
     if ($otpType -eq "totp" ) { $otpType = "$otpType=" }
-    $otpPeriod = if (-not [string]::IsNullOrEmpty($parseOtpUrl["period"])) { $parseOtpUrl["period"] } else { 30 }
-    $otpDigits = if (-not [string]::IsNullOrEmpty($parseOtpUrl["digits"])) { $parseOtpUrl["digits"] } else { 6 }
+    $otpPeriod = if (![string]::IsNullOrEmpty($parseOtpUrl["period"])) { $parseOtpUrl["period"] } else { 30 }
+    $otpDigits = if (![string]::IsNullOrEmpty($parseOtpUrl["digits"])) { $parseOtpUrl["digits"] } else { 6 }
     $otpSecret = $parseOtpUrl["secret"]
     return [OTPKIT]::GetOtp($otpSecret, $otpDigits, $otpPeriod)
   }
@@ -1542,6 +1542,10 @@ class CredentialManager {
     return $Credentials
   }
   [Psobject[]] static hidden get_StoredCreds() {
+    $_Host_OS = [GitHub]::Get_Host_Os()
+    if ($_Host_OS -in ('Linux', 'MacOs')) {
+      throw [System.Exception]::new('UnsupportedPlatform: get_StoredCreds() works on Windows Only.')
+    }
     # until I know the existance of a [wrapper module](https://learn.microsoft.com/en-us/powershell/utility-modules/crescendo/overview?view=ps-modules), I'll stick to this Hack.
     $cmdkey = (Get-Command cmdkey -ErrorAction SilentlyContinue).Source
     if ([string]::IsNullOrEmpty($cmdkey)) { throw [System.Exception]::new('get_StoredCreds() Failed.') }
@@ -3859,7 +3863,7 @@ class k3y {
 # [byte[]]Decrypt([byte[]]$BytesToDecrypt, [securestring]$Password, [byte[]]$salt) {
 #     $Password = [securestring]$this.ResolvePassword($Password); # (Get The real Password)
 #     ($IsValid, $Compression) = [k3Y]::AnalyseK3YUID($this, $Password, $false)[0, 2];
-#     if (-not $IsValid) { throw [System.Management.Automation.PSInvalidOperationException]::new("The Operation is not valid due to Expired K3Y.") };
+#     if (!$IsValid) { throw [System.Management.Automation.PSInvalidOperationException]::new("The Operation is not valid due to Expired K3Y.") };
 #     if ($Compression.Equals('')) { throw [System.Management.Automation.PSInvalidOperationException]::new("The Operation is not valid due to Invalid Compression.", [System.ArgumentNullException]::new('Compression')) };
 #     # todo: Chose the algorithm
 #     # if alg -eq RSA then we RSA+AES hybrid
@@ -4158,7 +4162,7 @@ function Get-ObjectHelp {
       $Type = $Object -as [System.Type]
     }
 
-    if (-not $Type) {
+    if (!$Type) {
       Write-Error "Could not identify object"
       return
     }
@@ -4240,7 +4244,7 @@ function Resolve-MemberOwnerType {
 
   # hackety-hack - this is prone to breaking in the future
   $TargetType = [System.Management.Automation.PSMethod].GetField("baseObject", "Instance,NonPublic").GetValue($Method)
-  if (($TargetType -isnot [System.Type]) -and (-not $TargetType.__CLASS)) {
+  if (($TargetType -isnot [System.Type]) -and (!$TargetType.__CLASS)) {
     $TargetType = $TargetType.GetType()
   }
 
@@ -4256,7 +4260,7 @@ function Resolve-MemberOwnerType {
     # TODO: support overloads
     $MethodInfo = $TargetType.GetMethods($Flags) | Where-Object { $_.Name -eq $Method.Name } | Select-Object -First 1
 
-    if (-not $MethodInfo) {
+    if (!$MethodInfo) {
       # this shouldn't happen.
       throw "Could not resolve owning type."
     }
@@ -4902,7 +4906,7 @@ Function ConvertTo-Hashtable {
       #only add properties that haven't been excluded
       if ($Exclude -notcontains $_) {
         #only add if -NoEmpty is not called and property has a value
-        if ($NoEmpty -AND -Not ($inputobject.$_)) {
+        if ($NoEmpty -AND !($inputobject.$_)) {
           Write-Verbose "Skipping $_ as empty"
         } else {
           Write-Verbose "Adding property $_"
@@ -5029,7 +5033,7 @@ Function Rename-Hashtable {
       Write-Verbose "Detected a $($var.value.GetType().fullname)"
 
       Write-Verbose "Testing for key $key"
-      if (-Not $var.value.Contains($key)) {
+      if (!$var.value.Contains($key)) {
         Write-Warning "Failed to find the key $key in the hashtable."
         #bail out
         Return
@@ -5388,7 +5392,7 @@ function Get-EncryptionAlgorithm {
   }
 }
 
-function Encrypt-Object {
+function Get-EncryptedObject {
   <#
     .SYNOPSIS
         Applies several paranoid encryptions to an Object or a file.
@@ -5399,7 +5403,7 @@ function Encrypt-Object {
         Yeah, It gets Pretty paranoid!
 
         There is an option to store your encryption key(s) in Windows Password vault so that the
-        Decryptor Function (Decrypt-Object) can use them without need of your input again.
+        Decryptor Function (Decryp) can use them without need of your input again.
     .NOTES
         # Some Points to Consider When Using This function:
 
@@ -5417,7 +5421,7 @@ function Encrypt-Object {
         i.e: Read: https://www.hackingarticles.in/credential-dumping-windows-credential-manager/
         So If you feel unsafe Retrieve your stuff from WindowsCredentialManager, Store them on a Goober or somethin
         Then clean your local vault, ie:
-        if (-not [bool]("Windows.Security.Credentials.PasswordVault" -as 'type';)) { [Windows.Security.Credentials.PasswordVault, Windows.Security.Credentials, ContentType = WindowsRuntime] }
+        if (![bool]("Windows.Security.Credentials.PasswordVault" -as 'type';)) { [Windows.Security.Credentials.PasswordVault, Windows.Security.Credentials, ContentType = WindowsRuntime] }
 
         $vault = [Windows.Security.Credentials.PasswordVault]::new()
         # Suppose you have stuff in your vault. ex:
@@ -5430,13 +5434,13 @@ function Encrypt-Object {
     .LINK
         https://github.com/alainQtec/cliHelper.Core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
     .EXAMPLE
-        $enc = Encrypt-Object -Object "Hello World!" -Password $([ArgonCage]::GetPassword()) -KeyOutFile .\PublicKee.txt
-        $dec = Decrypt-Object -InputBytes $enc -Password $([ArgonCage]::GetPassword()) -PublicKey $(cat .\PublicKee.txt)
+        $enc = Encrypt -Object "Hello World!" -Password $([ArgonCage]::GetPassword()) -KeyOutFile .\PublicKee.txt
+        $dec = Decrypt -InputBytes $enc -Password $([ArgonCage]::GetPassword()) -PublicKey $(cat .\PublicKee.txt)
     #>
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Justification = 'Prefer verb usage')]
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingConvertSecurestringWithPlainText", '')]
   [CmdletBinding(ConfirmImpact = "Medium", DefaultParameterSetName = 'WithSecureKey')]
-  [Alias('Encrypt')]
+  [Alias('Encrypt', 'Encrypt-Object')]
   [OutputType([byte[]])]
   param (
     # The Object you want to encrypt
@@ -5611,7 +5615,7 @@ function Encrypt-Object {
     return $bytes
   }
 }
-function Decrypt-Object {
+function Get-DecryptedObject {
   <#
     .SYNOPSIS
         Decryts Objects or files.
@@ -5623,13 +5627,13 @@ function Decrypt-Object {
         Specify a URI to a help page, this will show when Get-Help -Online is used.
     .EXAMPLE
         $msg = "My email: alain.1337dev@outlook.com"
-        $enc = Encrypt-Object $msg -Password $([ArgonCage]::GetPassword()) -KeyOutFile .\PublicKee.txt
-        $dec = Decrypt-Object $enc -Password $([ArgonCage]::GetPassword()) -PublicKey $(cat .\PublicKee.txt)
+        $enc = Encrypt $msg -Password $([ArgonCage]::GetPassword()) -KeyOutFile .\PublicKee.txt
+        $dec = Decrypt $enc -Password $([ArgonCage]::GetPassword()) -PublicKey $(cat .\PublicKee.txt)
     #>
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Justification = 'Prefer verb usage')]
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingConvertSecurestringWithPlainText", '')]
   [CmdletBinding(ConfirmImpact = "Medium", DefaultParameterSetName = 'WithSecureKey')]
-  [Alias('Decrypt')]
+  [Alias('Decrypt', 'Decrypt-Object')]
   [OutputType([byte[]])]
   param (
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = '__AllParameterSets')]
@@ -6042,7 +6046,7 @@ function Remove-Credential {
     $CredType = [CredType]"$Type"
     if ($PSCmdlet.ShouldProcess("Removing Credential, target: $Target", '', '')) {
       $IsRemoved = $CredentialManager.Remove($Target, $CredType);
-      if (-not $IsRemoved) {
+      if (!$IsRemoved) {
         throw 'Remove-Credential Failed. ErrorCode: 0x' + [CredentialManager]::LastErrorCode
       }
     }
@@ -6317,4 +6321,3 @@ function Get-GistFiles {
 #endregion GithubGistss
 
 #endregion Functions
-Export-ModuleMember -Function *

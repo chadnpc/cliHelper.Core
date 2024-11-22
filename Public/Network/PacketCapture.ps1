@@ -42,7 +42,7 @@ function Start-PacketTrace {
   process {
     try {
       if (Test-Path -Path $TraceFilePath -PathType Leaf) {
-        if (-not ($Force.IsPresent)) {
+        if (!($Force.IsPresent)) {
           throw "An existing trace file was found at [$($TraceFilePath)] and -Force was not used. Exiting.."
         } else {
           Remove-Item -Path $TraceFilePath

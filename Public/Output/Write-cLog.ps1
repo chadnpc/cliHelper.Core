@@ -125,7 +125,7 @@ function Write-cLog {
 
     # Split-Path throws an exception if called with a -Path that is null or empty.
     [string] $fileName = [string]::Empty
-    if (-not [string]::IsNullOrEmpty($invocationInfo.ScriptName)) {
+    if (![string]::IsNullOrEmpty($invocationInfo.ScriptName)) {
       $fileName = Split-Path -Path $invocationInfo.ScriptName -Leaf
     }
 

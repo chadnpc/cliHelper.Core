@@ -288,7 +288,7 @@ function Test-NetworkConnection {
 
         $TraceResults += netsh trace stop sessionname=tnc
 
-        if (-not (Test-Path -Path $LogFile)) {
+        if (!(Test-Path -Path $LogFile)) {
           $Message = "Error occured while collection routing events. Error: " + $TraceResults
           Write-Warning $Message
           return
@@ -351,7 +351,7 @@ function Test-NetworkConnection {
         $Return.ConstrainInterfaceIndex = $ConstrainInterface
 
         $Return.Detailed = ($InformationLevel -eq "Detailed")
-        if ($Return.Detailed -and (-not (CheckIfAdmin))) {
+        if ($Return.Detailed -and (!(CheckIfAdmin))) {
           Write-Warning "'-InformationLevel Detailed' requires elevation (Run as administrator)."
           $Return.Detailed = $False
         }
@@ -401,10 +401,10 @@ function Test-NetworkConnection {
 
           ##Try TCP connect using all resolved addresses until it succeeds
           $Iter = 0
-          while (($Iter -lt $Return.ResolvedAddresses.Count) -and (-not $Return.TcpTestSucceeded)) {
+          while (($Iter -lt $Return.ResolvedAddresses.Count) -and (!$Return.TcpTestSucceeded)) {
             $Return.TcpTestSucceeded = TestTCP -TargetIPAddress $Return.ResolvedAddresses[$Iter] -TargetPort $Return.RemotePort
             ##Output a warning message if the TCP test didn't succeed
-            if (-not $Return.TcpTestSucceeded) {
+            if (!$Return.TcpTestSucceeded) {
               Write-Warning "TCP connect to ($($Return.ResolvedAddresses[$Iter]) : $($Return.RemotePort)) failed"
             }
             $Iter++
@@ -425,20 +425,20 @@ function Test-NetworkConnection {
         #### Begin Ping test ####
 
         ##Attempt Ping test only if TCP test is not attempted or TCP test failed
-        $AttemptPingTest = (-not $AttemptTcpTest) -or (-not $Return.TcpTestSucceeded)
+        $AttemptPingTest = (!$AttemptTcpTest) -or (!$Return.TcpTestSucceeded)
         if ($AttemptPingTest) {
           $Return.PingSucceeded = $False
 
           ##Try Ping using all resolved addresses until it succeeds
           $Iter = 0
-          while (($Iter -lt $Return.ResolvedAddresses.Count) -and (-not $Return.PingSucceeded)) {
+          while (($Iter -lt $Return.ResolvedAddresses.Count) -and (!$Return.PingSucceeded)) {
             $Return.PingReplyDetails = PingTest -TargetIPAddress $Return.ResolvedAddresses[$Iter]
             if ($null -ne $Return.PingReplyDetails) {
               $Return.PingSucceeded = ($Return.PingReplyDetails.Status -eq [System.Net.NetworkInformation.IPStatus]::Success)
             }
 
             ##Output a warning message if Ping didn't succeed
-            if (-not $Return.PingSucceeded) {
+            if (!$Return.PingSucceeded) {
               $WarningString = "Ping to $($Return.ResolvedAddresses[$Iter]) failed"
               if ($null -ne $Return.PingReplyDetails) {
                 $WarningString += " with status: $($Return.PingReplyDetails.Status)"

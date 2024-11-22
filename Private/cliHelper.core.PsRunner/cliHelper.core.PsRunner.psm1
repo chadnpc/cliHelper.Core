@@ -535,9 +535,9 @@ class PsRunner {
 }
 #endregion Classes
 
-function Write-ProgressBar() {}
-function Write-Spinner() {}
-function Write-LoadingBar() {}
+# function Write-ProgressBar() {}
+# function Write-Spinner() {}
+# function Write-LoadingBar() {}
 
 function Get-ProcessBitness {
   <#
@@ -569,7 +569,7 @@ public static extern bool IsWow64Process(
 	[Out, MarshalAs(UnmanagedType.Bool)] out bool wow64Process);
 "@
     }
-    if (-not ("Kernel32.Bitness" -as [type])) {
+    if (!("Kernel32.Bitness" -as [type])) {
       Add-Type @Signature
     }
   }
@@ -895,7 +895,7 @@ $dbMessagePrepend [`"$exeToRun`" $wrappedStatements]. This may take a while, dep
     $process.StartInfo.UseShellExecute = $false
     $process.StartInfo.WorkingDirectory = $workingDirectory
 
-    if ($elevated -and -not $alreadyElevated -and [Environment]::OSVersion.Version -ge (New-Object 'Version' 6, 0)) {
+    if ($elevated -and !$alreadyElevated -and [Environment]::OSVersion.Version -ge (New-Object 'Version' 6, 0)) {
       # this doesn't actually currently work - because we are not running under shell execute
       Write-Debug "Setting RunAs for elevation"
       $process.StartInfo.Verb = "RunAs"
@@ -1108,7 +1108,7 @@ function Wait-Task {
       } else {
         $Result = TaskResult($_Job)
       }
-      WriteLog $LogMsg -s:$_Success
+      Write-Log $LogMsg -s:$_Success
       [Console]::CursorVisible = $true; Set-AttemptMSg ' '
     } else {
       # $Tasks += $Task
@@ -1210,7 +1210,7 @@ function Invoke-Program {
         $ps.StartInfo = $processStartInfo;
         Write-Verbose -Message "Starting process path [$($processStartInfo.FileName)] - Args: [$($processStartInfo.Arguments)] - Working dir: [$($Using:WorkingDirectory)]"
         $null = $ps.Start();
-        if (-not $ps) {
+        if (!$ps) {
           throw "Error running program: $($ps.ExitCode)"
         } else {
           $ps.WaitForExit()
@@ -1361,16 +1361,18 @@ function Invoke-RetriableCommand {
   }
 }
 
-function Monitor-Process {
+function Start-ProcessMonitor {
   # .SYNOPSIS
   # Monitor process start/stop events
   # .DESCRIPTION
   # Monitors specified processes and reports when they start or stop running
   # .EXAMPLE
-  # Get-Process | Monitor-Process
+  # Get-Process | Start-ProcessMonitor
   # .PARAMETER process
   # Process object to monitor
-  [CmdletBinding()][Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Justification = 'Prefer verb usage')]
+  [CmdletBinding()]
+  [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification = "Not changing state")]
+  [Alias('Monitor-Process')]
   param (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
     [System.Diagnostics.Process]$process
@@ -1389,7 +1391,7 @@ function Monitor-Process {
       foreach ($proc in $script:processTable.Keys) {
         try {
           $process = Get-Process -Id $proc -ErrorAction SilentlyContinue
-          if (-not $process -and $script:processTable[$proc]) {
+          if (!$process -and $script:processTable[$proc]) {
             Write-Host "Process stopped: $($script:processTable[$proc].ProcessName) (ID: $proc)" -ForegroundColor Red
             $script:processTable.Remove($proc)
           }
@@ -1407,7 +1409,7 @@ function Monitor-Process {
 
   process {
     # Add or update process in the tracking table
-    if (-not $script:processTable.ContainsKey($process.Id)) {
+    if (!$script:processTable.ContainsKey($process.Id)) {
       Write-Host "Now monitoring process: $($process.ProcessName) (ID: $($process.Id))" -ForegroundColor Green
       $script:processTable[$process.Id] = @{
         ProcessName = $process.ProcessName
