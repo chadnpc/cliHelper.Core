@@ -411,3 +411,4 @@ Tests/PsImport.Module.Tests.ps1
 Tests/PsImport.Features.Tests.ps1
 Tests/PsImport.Intergration.Tests.ps1
 Tests/Resources/Test-GitHubScript.ps1
+.env
