@@ -102,6 +102,7 @@ enum RSAPadding {
   OaepSHA384
   OaepSHA512
 }
+
 enum Compression {
   Gzip
   Deflate
