@@ -503,7 +503,7 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
   foreach ($Type in $typestoExport) {
     $TypeAcceleratorsClass::Remove($Type.FullName)
   }
-}.GetNewClosure()
+}.GetNewClosure();
 
 $scripts = @();
 $Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
@@ -515,7 +515,7 @@ foreach ($file in $scripts) {
     if ([string]::IsNullOrWhiteSpace($file.fullname)) { continue }
     . "$($file.fullname)"
   } Catch {
-    Write-Warning "$($file.FullName) Failed to import function $($file.BaseName): $_"
+    Write-Warning "Failed to import function $($file.BaseName): $_"
     $host.UI.WriteErrorLine($_)
   }
 }
@@ -525,4 +525,4 @@ $Param = @{
   Cmdlet   = '*'
   Alias    = '*'
 }
-Export-ModuleMember @Param -Verbose
+Export-ModuleMember @Param
