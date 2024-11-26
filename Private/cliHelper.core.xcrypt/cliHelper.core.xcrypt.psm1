@@ -4,7 +4,6 @@ using namespace System.Text
 using namespace System.Net.Http
 using namespace System.Security
 using namespace System.Runtime.InteropServices
-Import-Module cliHelper.xconvert
 
 # .SYNOPSIS
 #   xcrypt is a collection af all the basic Cryptography functions that you need. AES 128,192 or 256 etc.

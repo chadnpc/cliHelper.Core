@@ -73,7 +73,7 @@ begin {
 }
 
 process {
-  Get-Module cliHelper.core | Remove-Module
+  Get-Module cliHelper.core | Remove-Module -Force
   Write-Host "[+] Checking test files ..." -ForegroundColor Green
   $missingTestFiles = $testFiles.Where({ !$_.Exists })
   if ($missingTestFiles.count -gt 0) { throw [System.IO.FileNotFoundException]::new($($testFiles.BaseName -join ', ')) }
