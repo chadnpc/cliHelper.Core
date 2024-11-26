@@ -45,7 +45,7 @@ param(
 
   [Parameter(Mandatory = $false, ParameterSetName = 'task')]
   [Alias('u')][ValidateNotNullOrWhiteSpace()]
-  [string]$gitUser = $env:USER,
+  [string]$gitUser = { return $Iswindows ? $env:UserName : $env:USER }.Invoke(),
 
   [parameter(ParameterSetName = 'task')]
   [Alias('i')]
@@ -55,6 +55,7 @@ param(
   [Alias('h', '-help')]
   [switch]$Help
 )
+
 begin {
   function Register-PackageFeed ([switch]$ForceBootstrap) {
     if ($null -eq (Get-PSRepository -Name PSGallery -ErrorAction Ignore)) {
@@ -69,18 +70,32 @@ begin {
       Install-PackageProvider -Name NuGet -Force | Out-Null
     }
   }
+  function Read-ModulePsd1([IO.DirectoryInfo]$folder) {
+    $p = [IO.Path]::Combine($folder.FullName, "$($folder.BaseName).psd1"); $d = [IO.File]::ReadAllText($p);
+    return [scriptblock]::Create("$d").Invoke()
+  }
+  function Import-rmodule([string]$Name) {
+    if (!(Get-Module $Name -ListAvailable -ErrorAction Ignore)) { Install-Module $Name -Verbose:$false };
+    $(Get-InstalledModule $Name -ErrorAction Ignore).InstalledLocation | Split-Path | Import-Module -Verbose:$false
+  }
+  function Import-RequiredModules ([IO.DirectoryInfo]$RootPath, [string[]]$Names, [switch]$UseSelf) {
+    $self = [IO.Path]::Combine($RootPath.FullName, "$($RootPath.BaseName).psm1")
+    if ([IO.File]::Exists($self) -and $UseSelf) {
+      # (Running locally) : so so we need to test the latest version/features
+      # Install dependencies first:
+      $Names.ForEach({ Import-rmodule $_ })
+      Write-Host "<< Import .psm1" -f Green # (done after requirements are imported)
+      Import-Module $self -Verbose:$false
+    } else {
+      # (Running in GITHUB_ACTION)
+      $Names.ForEach({ Import-rmodule $_ })
+    }
+  }
 }
 process {
   Register-PackageFeed -ForceBootstrap
-  # Import any required modules
-  @(
-    "cliHelper.xconvert",
-    "PsCraft"
-  ).ForEach({
-      if (!(Get-Module $_ -ListAvailable -ErrorAction Ignore)) { Install-Module $_ -Verbose:$false };
-      $(Get-InstalledModule $_ -ErrorAction Ignore).InstalledLocation | Split-Path | Import-Module -Verbose:$false
-    }
-  )
+  $data = Read-ModulePsd1 -folder [IO.DirectoryInfo]$Path
+  Import-RequiredModules -RootPath $Path -Names $data.RequiredModules
   if ($PSCmdlet.ParameterSetName -eq 'help') {
     Build-Module -Help
   } else {
