@@ -50,7 +50,9 @@
   ScriptsToProcess      = @()
   TypesToProcess        = @()
   FormatsToProcess      = @()
-  RequiredModules       = @()
+  RequiredModules       = @(
+    'cliHelper.xconvert'
+  )
   CmdletsToExport       = '*'
   VariablesToExport     = '*'
   AliasesToExport       = '*'
