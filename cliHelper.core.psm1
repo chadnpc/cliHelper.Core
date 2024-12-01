@@ -2,6 +2,7 @@ using namespace System.IO
 using module Private/cliHelper.core.help
 using module Private/cliHelper.core.xcrypt
 using module Private/cliHelper.core.PsRunner
+using module Private/cliHelper.core.WeatherClient
 Import-Module cliHelper.xconvert
 
 # xconvert
@@ -460,22 +461,24 @@ class RecordBase {
 
 # Types that will be available to users when they import the module.
 $typestoExport = @(
-  [CredentialManager],
-  [NetworkManager],
-  [ProgressUtil],
-  [FileMonitor],
-  [FileCryptr],
-  [PsRunner],
-  [GitHub],
-  [xcrypt],
-  [cliart],
-  [AesGCM],
-  [AesCng],
-  [AesCtr],
-  [Gist],
-  [X509],
-  [RSA],
-  [K3Y],
+  [CredentialManager]
+  [NetworkManager]
+  [WeatherClient]
+  [GeoCoordinate]
+  [ProgressUtil]
+  [FileMonitor]
+  [FileCryptr]
+  [PsRunner]
+  [GitHub]
+  [xcrypt]
+  [cliart]
+  [AesGCM]
+  [AesCng]
+  [AesCtr]
+  [Gist]
+  [X509]
+  [RSA]
+  [K3Y]
   [cli]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
@@ -505,9 +508,8 @@ $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
   }
 }.GetNewClosure();
 
-$scripts = @();
-$Public = Get-ChildItem "$PSScriptRoot/Public" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
-$scripts += Get-ChildItem "$PSScriptRoot/Private" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
+$scripts = @(); $Public = Get-ChildItem "$PSScriptRoot/Public/" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
+$scripts += Get-ChildItem "$PSScriptRoot/Private/" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
 $scripts += $Public
 
 foreach ($file in $scripts) {

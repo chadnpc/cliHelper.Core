@@ -1,32 +1,29 @@
 function Get-IpRange {
   <#
-.SYNOPSIS
-    Given a subnet in CIDR format, get all of the valid IP addresses in that range.
-.DESCRIPTION
-    Given a subnet in CIDR format, get all of the valid IP addresses in that range.
-.PARAMETER Subnets
-    The subnet written in CIDR format 'a.b.c.d/#' and an example would be '192.168.1.24/27'. Can be a single value, an
-    array of values, or values can be taken from the pipeline.
-.EXAMPLE
-    Get-IpRange -Subnets '192.168.1.24/30'
+  .SYNOPSIS
+      Given a subnet in CIDR format, get all of the valid IP addresses in that range.
+  .DESCRIPTION
+      Given a subnet in CIDR format, get all of the valid IP addresses in that range.
+  .PARAMETER Subnets
+      The subnet written in CIDR format 'a.b.c.d/#' and an example would be '192.168.1.24/27'. Can be a single value, an
+      array of values, or values can be taken from the pipeline.
+  .EXAMPLE
+      Get-IpRange -Subnets '192.168.1.24/30'
 
-    192.168.1.25
-    192.168.1.26
-.EXAMPLE
-    (Get-IpRange -Subnets '10.100.10.0/24').count
+      192.168.1.25
+      192.168.1.26
+  .EXAMPLE
+      (Get-IpRange -Subnets '10.100.10.0/24').count
 
-    254
-.EXAMPLE
-    '192.168.1.128/30' | Get-IpRange
+      254
+  .EXAMPLE
+      '192.168.1.128/30' | Get-IpRange
 
-    192.168.1.129
-    192.168.1.130
-.NOTES
-    Inspired by https://gallery.technet.microsoft.com/PowerShell-Subnet-db45ec74
-
-    * Added comment help
-#>
-
+      192.168.1.129
+      192.168.1.130
+  .NOTES
+      Inspired by https://gallery.technet.microsoft.com/PowerShell-Subnet-db45ec74
+  #>
   [CmdletBinding(ConfirmImpact = 'None')]
   Param(
     [Parameter(Mandatory, HelpMessage = 'Please enter a subnet in the form a.b.c.d/#', ValueFromPipeline, Position = 0)]

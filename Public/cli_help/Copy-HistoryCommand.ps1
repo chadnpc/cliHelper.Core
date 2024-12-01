@@ -1,5 +1,4 @@
 Function Copy-HistoryCommand {
-
   [CmdletBinding(SupportsShouldProcess)]
   [alias("ch")]
   [outputtype("None", "System.String")]

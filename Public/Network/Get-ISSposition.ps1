@@ -7,8 +7,7 @@
   #>
   try {
     $ISS = (Invoke-WebRequest "http://api.open-notify.org/iss-now.json" -UserAgent "curl" -UseBasicParsing).Content | ConvertFrom-Json
-
-    & "$PSScriptRoot/give-reply.ps1" "The International Space Station is currently at $($ISS.iss_position.longitude)° longitude and $($ISS.iss_position.latitude)° latitude."
+    Write-Info "The International Space Station is currently at $($ISS.iss_position.longitude)° longitude and $($ISS.iss_position.latitude)° latitude."
     # success
   } catch {
     # Write-Log $_.Exception.ErrorRecord

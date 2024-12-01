@@ -1,13 +1,11 @@
 ﻿function Get-GeoLocIp {
-  <#
-    .SYNOPSIS
-        Get Geo location for an IP or a CIDR network from the RIPE database
-    .PARAMETER IPAddress
-        IP address to retrieve geo location information for.
-    .EXAMPLE
-        !geolocip 83.23.45.3
-        !geolocip 83.23.45.0/21
-    #>
+  # .SYNOPSIS
+  #   Get Geo location for an IP or a CIDR network from the RIPE database
+  # .PARAMETER IPAddress
+  #   IP address to retrieve geo location information for.
+  # .EXAMPLE
+  #   !geolocip 83.23.45.3
+  #   !geolocip 83.23.45.0/21
   [cmdletbinding()]
   param(
     [parameter(Mandatory)]

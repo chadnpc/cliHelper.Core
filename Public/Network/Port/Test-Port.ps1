@@ -173,7 +173,6 @@ function Test-Port {
         }
       }
     }
-
   }
 
   end {

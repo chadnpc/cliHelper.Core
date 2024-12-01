@@ -1,5 +1,5 @@
 
-Function Copy-HelpExample {
+Function Get-HelpExample {
   [cmdletbinding()]
   [alias("che")]
   Param(

@@ -1,12 +1,12 @@
 function Test-Network {
   <#
-.SYNOPSIS
-    Wrapper function for Get-IpRange, Test-ConnectionAsync, and Get-DNSHostEntryAsync to give summary table of ip addresses that either resolve to a host name or respond to a ping
-.DESCRIPTION
-    Wrapper function for Get-IpRange, Test-ConnectionAsync, and Get-DNSHostEntryAsync to give summary table of ip addresses that either resolve to a host name or respond to a ping
-.PARAMETER Subnet
-    A string or string array of subnets listed in CIDR format (e.g. 10.100.10.0/24). Can either be specified with -Subnet parameter or fed from the pipeline
-.EXAMPLE
+  .SYNOPSIS
+      Wrapper function for Get-IpRange, Test-ConnectionAsync, and Get-DNSHostEntryAsync to give summary table of ip addresses that either resolve to a host name or respond to a ping
+  .DESCRIPTION
+      Wrapper function for Get-IpRange, Test-ConnectionAsync, and Get-DNSHostEntryAsync to give summary table of ip addresses that either resolve to a host name or respond to a ping
+  .PARAMETER Subnet
+      A string or string array of subnets listed in CIDR format (e.g. 10.100.10.0/24). Can either be specified with -Subnet parameter or fed from the pipeline
+  .EXAMPLE
     '10.100.40.0/29' | Test-Network
 
     IpAddress   ComputerName                Result
@@ -17,8 +17,7 @@ function Test-Network {
     10.100.40.4 server-101811.contosco.com Success
     10.100.40.5 server-102372.contosco.com TimeOut
     10.100.40.6 server-101875.contosco.com Success
-#>
-
+  #>
   [cmdletbinding()]
   param(
     [Parameter(Mandatory, HelpMessage = 'Please enter a network in CIDR format (ex. 192.168.1.0/24)', Position = 0, ValueFromPipeline)]

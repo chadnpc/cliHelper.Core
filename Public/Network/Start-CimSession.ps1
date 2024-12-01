@@ -30,7 +30,7 @@
     Website: http://mikefrobbins.com
     Twitter: @mikefrobbins
 #>
-  [CmdletBinding(SupportsShouldProcess)]
+  [CmdletBinding(SupportsShouldProcess = $true)]
   param(
     [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
     [ValidateNotNullorEmpty()]
@@ -54,10 +54,9 @@
     }
   }
 
-  PROCESS {
+  process {
     foreach ($Computer in $ComputerName) {
       $SessionParams.ComputerName = $Computer
-
       if ((Test-WSMan -ComputerName $Computer -ErrorAction SilentlyContinue).productversion -match 'Stack: ([3-9]|[1-9][0-9]+)\.[0-9]+') {
         try {
           Write-Verbose -Message "Attempting to connect to $Computer using the WSMAN protocol."
@@ -65,18 +64,14 @@
         } catch {
           Write-Warning -Message "Unable to connect to $Computer using the WSMAN protocol. Verify your credentials and try again."
         }
-      }
-
-      else {
+      } else {
         $SessionParams.SessionOption = $Opt
-
         try {
           Write-Verbose -Message "Attempting to connect to $Computer using the DCOM protocol."
           New-CimSession @SessionParams
         } catch {
           Write-Warning -Message "Unable to connect to $Computer using the WSMAN or DCOM protocol. Verify $Computer is online and try again."
         }
-
         $SessionParams.Remove('SessionOption')
       }
     }

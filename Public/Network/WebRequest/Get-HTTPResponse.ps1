@@ -83,15 +83,12 @@
           if ($null -ne $Response) {
             $DownloadException.Data["StatusCode"] = [int] $Response.StatusCode
             $DownloadException.Data["ErrorMessage"] = "Unable to download $Uri. Returned HTTP status code: " + $DownloadException.Data["StatusCode"]
-
             if (404 -eq [int] $Response.StatusCode) {
               $cts.Cancel()
             }
           }
-
           throw $DownloadException
         }
-
         $response
       } catch [System.Net.Http.HttpRequestException] {
         $DownloadException = [System.Exception] "Unable to download $Uri."

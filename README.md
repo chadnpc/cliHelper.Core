@@ -1,8 +1,26 @@
-# [![cliHelper.core](https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a)](https://www.powershellgallery.com/packages/cliHelper.core)
+<h1> <img align="right" src="https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a" width="200" height="200" alt="icon" /></h1>
 
-🔥 Blazingly fast PowerShell thingy that stonks up your terminal game.
+<div align="Left">
+  <a href="https://www.powershellgallery.com/packages/cliHelper.core"><b>cliHelper.core</b></a>
+  <p>
+    🔥 A collections of essential PowerShell functions that stonks up your terminal game</b>.
+    </br></br>
+    <a href="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_windows.yaml">
+    <img src="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_windows.yaml/badge.svg" alt="Build on Windows"/>
+    </a>
+    <a href="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_Mac.yaml">
+    <img src="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_Mac.yaml/badge.svg" alt="Build on MacOS"/>
+    </a>
+    <a href="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_Linux.yaml">
+    <img src="https://github.com/alainQtec/cliHelper.core/actions/workflows/Build_on_Linux.yaml/badge.svg" alt="Build on Linux"/>
+    </a>
+    <a href="https://www.powershellgallery.com/packages/cliHelper.core">
+    <img src="https://img.shields.io/powershellgallery/dt/cliHelper.core.svg?style=flat&logo=powershell&color=blue" alt="PowerShell Gallery" title="PowerShell Gallery" />
+    </a>
+  </p>
+</div>
 
-## usage
+<h2><b>Usage</b></h2>
 
 ```PowerShell
 Install-Module cliHelper.core

@@ -15,7 +15,6 @@
   process {
     try {
       if ($IPaddress -eq "" ) { $IPaddress = Read-Host "Enter IP address to locate" }
-
       $result = Invoke-RestMethod -Method Get -Uri "http://ip-api.com/json/$IPaddress"
       Write-Output $result
       # success

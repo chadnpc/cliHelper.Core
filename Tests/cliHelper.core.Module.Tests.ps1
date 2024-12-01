@@ -18,7 +18,7 @@ Write-Host "[+] Get all functions present in the Manifest ..." -ForegroundColor 
 $script:ExportedFunctions = $ModuleInformation.ExportedFunctions.Values.Name
 Write-Host "      ExportedFunctions: " -ForegroundColor DarkGray -NoNewline
 Write-Host $($ExportedFunctions -join ', ')
-$script:PS1Functions = Get-ChildItem -Path "$ModulePath/$moduleVersion/Public/*.ps1" -Recurse
+$script:PS1Functions = Get-ChildItem -Path "$ModulePath/$moduleVersion/Public/" -Recurse -Filter "*.ps1"
 
 Describe "Module tests for $($([Environment]::GetEnvironmentVariable($env:RUN_ID + 'ProjectName')))" {
   Context " Confirm valid Manifest file" {
@@ -51,7 +51,7 @@ Describe "Module tests for $($([Environment]::GetEnvironmentVariable($env:RUN_ID
     It "The number of missing functions should be 0 " {
       If ($ExportedFunctions.count -ne $PS1Functions.count) {
         $Compare = Compare-Object -ReferenceObject $ExportedFunctions -DifferenceObject $PS1Functions.Basename
-        $($Compare.InputObject -Join '').Trim() | Should -BeNullOrEmpty
+        $($Compare.InputObject -Join ' ').Trim() | Should -BeNullOrEmpty
       }
     }
   }

@@ -27,7 +27,7 @@
   Copyright             = 'Copyright © <Year> Alain Herve. All rights reserved.'
 
   # Description of the functionality provided by this module
-  Description           = 'PowerShell module to improve core devx'
+  Description           = '🔥 A collections of essential PowerShell functions to improve devx'
 
   # Minimum version of the PowerShell engine required by this module
   PowerShellVersion     = '7.0'
