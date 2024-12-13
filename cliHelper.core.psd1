@@ -72,7 +72,7 @@
       Tags         = 'convert', 'xconvert'
       LicenseUri   = 'https://alain.mit-license.org/'
       ProjectUri   = 'https://github.com/alainQtec/cliHelper.core'
-      IconUri      = 'https://raw.githubusercontent.com/alainQtec/cliHelper.core/refs/heads/main/docs/img/apple-touch-icon.png'
+      IconUri      = 'https://github.com/user-attachments/assets/160c2204-4a29-47a0-a8fc-a2f441317e58'
       ReleaseNotes = "
 <ReleaseNotes>
 "

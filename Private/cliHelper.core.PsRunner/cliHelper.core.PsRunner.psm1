@@ -42,7 +42,7 @@ class ProgressUtil {
     "-\\|/",
     "|/-\\"
   );
-  static [int] $_twirlIndex = 0
+  static hidden [int] $_twirlIndex = 0
   static hidden [string]$frames
   static [void] WriteProgressBar([int]$percent) {
     [ProgressUtil]::WriteProgressBar($percent, $true)

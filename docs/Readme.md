@@ -2,8 +2,8 @@
 <!-- Versioning guidelines:
 
 1. Patch Releases (Bug Fixes, Minor Changes):
-- 0.1.5
-- 0.1.5
+- 0.1.6
+- 0.1.6
 - 0.1.6
 
 2. Minor Version Releases (New Features, Backwards-Compatible):

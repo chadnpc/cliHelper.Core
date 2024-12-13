@@ -1,9 +1,20 @@
+using namespace System
 using namespace System.IO
-using module Private/cliHelper.core.help
+using namespace System.Web
+using namespace System.Threading
+using namespace System.Collections.Generic
+using namespace System.Management.Automation
+using namespace System.Text.Json.Serialization
+using namespace System.Runtime.InteropServices
+
+using module Private/cliHelper.core.config
 using module Private/cliHelper.core.xcrypt
 using module Private/cliHelper.core.PsRunner
 using module Private/cliHelper.core.WeatherClient
-Import-Module cliHelper.xconvert
+
+#Requires -RunAsAdministrator
+#Requires -Modules cliHelper.xconvert
+#Requires -Psedition Core
 
 # xconvert
 #!/usr/bin/env pwsh
@@ -11,9 +22,9 @@ Import-Module cliHelper.xconvert
 # art and animations
 
 # .SYNOPSIS
-#     A console writeline helper
+#   A console writeline helper
 # .EXAMPLE
-#     Write-AnimatedHost "Hello world" -f magenta
+#   Write-AnimatedHost "Hello world" -f magenta
 class cli {
   static hidden [ValidateNotNull()][string]$Preffix # .EXAMPLE Try this: # [cli]::Preffix = '@:'; [void][cli]::Write('animations and stuff', [ConsoleColor]::Magenta)
   static hidden [ValidateNotNull()][scriptblock]$textValidator # ex: if $text does not match a regex throw 'erro~ ..'
@@ -93,38 +104,58 @@ class cli {
 }
 
 # .SYNOPSIS
-#   A class to convert dot ascii arts to b64string & vice versa
+#  cliart helper.
 # .DESCRIPTION
-#   Cli art created from sites like https://lachlanarthur.github.io/Braille-ASCII-Art/ can only be embeded as b64 string
-#   So this class helps speed up the conversion process
+#  A class to convert dot ascii arts to b64string & vice versa
+# .LINK
+#  https://lachlanarthur.github.io/Braille-ASCII-Art/
 # .EXAMPLE
-#   $art = [cliart]::Create((Get-Item ./ascii))
-#   Write-Host "$art" -f Green
+#  $art = [cliart]::Create((Get-Item ./ascii))
+# .EXAMPLE
+#  $a = [cliart]"/home/alain/Documents/GitHub/clihelper_modules/cliHelper.core/Tests/cliart_test.txt/hacker"
+#  $print_expression = $a.GetPrinter()
+#  Now instead of hard coding the content of the art file, you can use $print_expression anywhere in your script
 class cliart {
-  hidden [string]$bstr
+  [string]$cstr
+  cliart() {}
   cliart([byte[]]$bytes) { [void][cliart]::_init_($bytes, [ref]$this) }
-  cliart([string]$b64str) { [void][cliart]::_init_($b64str, [ref]$this) }
-  cliart([FileInfo]$file) { [void][cliart]::_init_($file, [ref]$this) }
+  cliart([string]$b64str) {
+    if ([xcrypt]::IsBase64String($b64str)) {
+      [void][cliart]::_init_($b64str, [ref]$this)
+    } else {
+      if ([IO.Path]::IsPathFullyQualified($b64str)) {
+        $this.cstr = [cliart]::Create((Get-Item $b64str)).cstr
+      }
+    }
+  }
+  cliart([IO.FileInfo]$file) { [void][cliart]::_init_($file, [ref]$this) }
 
   static [cliart] Create([byte[]]$bytes) { return [cliart]::_init_($bytes, [ref][cliart]::new()) }
   static [cliart] Create([string]$b64str) { return [cliart]::_init_($b64str, [ref][cliart]::new()) }
-  static [cliart] Create([FileInfo]$file) { return [cliart]::_init_($file, [ref][cliart]::new()) }
+  static [cliart] Create([IO.FileInfo]$file) { return [cliart]::_init_($file, [ref][cliart]::new()) }
 
-  static hidden [cliart] _init_([string]$s, [ref]$o) { $o.Value.bstr = $s; return $o.Value }
-  static hidden [cliart] _init_([FileInfo]$file, [ref]$o) { return [cliart]::_init_([IO.File]::ReadAllBytes($file.FullName), [ref]$o) }
-  static hidden [cliart] _init_([byte[]]$bytes, [ref]$o) { $o.Value.bstr = $bytes | xconvert ToBase85, FromUTF8str, ToCompressed, ToBase64str; return $o.Value }
-
-  static [string] Print([string]$B64String) {
-    return ($B64String | xconvert FromBase64str, FromCompressed, FromBase85, ToUTF8str)
+  static hidden [cliart] _init_([string]$s, $o) { $o.Value.cstr = $s; return $o.Value }
+  static hidden [cliart] _init_([IO.FileInfo]$file, $o) {
+    return [cliart]::_init_([IO.File]::ReadAllBytes($file.FullName), $o)
+  }
+  static hidden [cliart] _init_([byte[]]$bytes, $o) {
+    $o.Value.cstr = [convert]::ToBase64String($bytes) | xconvert ToCompressed; return $o.Value
+  }
+  static [string] Print([string]$cstr) {
+    return [System.Text.Encoding]::UTF8.GetString([convert]::FromBase64String(($cstr | xconvert FromCompressed)))
+  }
+  [string] GetPrinter() {
+    return '[cliart]::Print("{0}")' -f $this.cstr
   }
   [string] ToString() {
-    return [cliart]::Print($this.bstr)
+    return [cliart]::Print($this.cstr)
   }
 }
+
 class NetworkManager {
   [string] $HostName
   static [System.Net.IPAddress[]] $IPAddresses
-  static [RecordBase] $DownloadOptions = [RecordBase]::New(@{
+  static [PsRecord] $DownloadOptions = [PsRecord]::New(@{
       ShowProgress      = $true
       ProgressBarLength = [int]([Console]::WindowWidth * 0.7)
       ProgressMessage   = [string]::Empty
@@ -289,197 +320,13 @@ class NetworkManager {
     }
   }
 }
-
-class RecordBase {
-  RecordBase() {}
-  [void] Add([string]$key, [System.Object]$value) {
-    [ValidateNotNullOrEmpty()][string]$key = $key
-    if (!$this.HasNoteProperty($key)) {
-      $htab = [hashtable]::new(); $htab.Add($key, $value); $this.Add($htab)
-    } else {
-      Write-Warning "Config.Add() Skipped $Key. Key already exists."
-    }
-  }
-  [void] Add([hashtable]$table) {
-    [ValidateNotNullOrEmpty()][hashtable]$table = $table
-    $Keys = $table.Keys | Where-Object { !$this.HasNoteProperty($_) -and ($_.GetType().FullName -eq 'System.String' -or $_.GetType().BaseType.FullName -eq 'System.ValueType') }
-    foreach ($key in $Keys) {
-      if ($key -notin ('File', 'Remote', 'LastWriteTime')) {
-        $this | Add-Member -MemberType NoteProperty -Name $key -Value $table[$key]
-      } else {
-        $this.$key = $table[$key]
-      }
-    }
-  }
-  [void] Add([hashtable[]]$items) {
-    foreach ($item in $items) { $this.Add($item) }
-  }
-  [void] Add([System.Collections.Generic.List[hashtable]]$items) {
-    foreach ($item in $items) { $this.Add($item) }
-  }
-  [void] Set([string]$key, [System.Object]$value) {
-    $htab = [hashtable]::new(); $htab.Add($key, $value)
-    $this.Set($htab)
-  }
-  [void] Set([hashtable]$table) {
-    [ValidateNotNullOrEmpty()][hashtable]$table = $table
-    $Keys = $table.Keys | Where-Object { $_.GetType().FullName -eq 'System.String' -or $_.GetType().BaseType.FullName -eq 'System.ValueType' } | Sort-Object -Unique
-    foreach ($key in $Keys) {
-      if (!$this.psObject.Properties.Name.Contains($key)) {
-        $this | Add-Member -MemberType NoteProperty -Name $key -Value $table[$key] -Force
-      } else {
-        $this.$key = $table[$key]
-      }
-    }
-  }
-  [void] Set([hashtable[]]$items) {
-    foreach ($item in $items) { $this.Set($item) }
-  }
-  [void] Set([System.Collections.Specialized.OrderedDictionary]$dict) {
-    $dict.Keys.Foreach({ $this.Set($_, $dict["$_"]) });
-  }
-  [bool] HasNoteProperty([object]$Name) {
-    [ValidateNotNullOrEmpty()][string]$Name = $($Name -as 'string')
-    return (($this | Get-Member -Type NoteProperty | Select-Object -ExpandProperty name) -contains "$Name")
-  }
-  [array] ToArray() {
-    $array = @(); $props = $this | Get-Member -MemberType NoteProperty
-    if ($null -eq $props) { return @() }
-    $props.name | ForEach-Object { $array += @{ $_ = $this.$_ } }
-    return $array
-  }
-  [string] ToJson() {
-    return [string]($this | Select-Object -ExcludeProperty count | ConvertTo-Json -Depth 3)
-  }
-  [System.Collections.Specialized.OrderedDictionary] ToOrdered() {
-    $dict = [System.Collections.Specialized.OrderedDictionary]::new(); $Keys = $this.PsObject.Properties.Where({ $_.Membertype -like "*Property" }).Name
-    if ($Keys.Count -gt 0) {
-      $Keys | ForEach-Object { [void]$dict.Add($_, $this."$_") }
-    }
-    return $dict
-  }
-  static [hashtable[]] Read([string]$FilePath) {
-    $pass = $null; $cfg = $null
-    try {
-      [ValidateNotNullOrEmpty()][string]$FilePath = [AesGCM]::GetUnResolvedPath($FilePath)
-      if (![IO.File]::Exists($FilePath)) { throw [FileNotFoundException]::new("File '$FilePath' was not found") }
-      if ([string]::IsNullOrWhiteSpace([AesGCM]::caller)) { [AesGCM]::caller = [RecordBase]::caller }
-      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to decrypt configs" -AsSecureString }else { [AesGCM]::GetUniqueMachineId() | xconvert ToSecurestring })
-      $_ob = [AesGCM]::Decrypt(([IO.File]::ReadAllText($FilePath) | xconvert FromBase85), $pass) | xconvert FromCompressed, FromBytes
-      $cfg = [hashtable[]]$_ob.Keys.ForEach({ @{ $_ = $_ob.$_ } })
-    } catch {
-      throw $_.Exeption
-    } finally {
-      Remove-Variable Pass -Force -ErrorAction SilentlyContinue
-    }
-    return $cfg
-  }
-  static [hashtable[]] EditFile([IO.FileInfo]$File) {
-    $result = @(); $private:config_ob = $null; $fswatcher = $null; $process = $null;
-    [ValidateScript({ if ([IO.File]::Exists($_)) { return $true } ; throw [FileNotFoundException]::new("File '$_' was not found") })][IO.FileInfo]$File = $File;
-    $OutFile = [IO.FileInfo][IO.Path]::GetTempFileName()
-    $UseVerbose = [bool]$((Get-Variable verbosePreference -ValueOnly) -eq "continue")
-    try {
-      [NetworkManager]::BlockAllOutbound()
-      if ($UseVerbose) { "[+] Edit Config started .." | Write-Host -ForegroundColor Magenta }
-      [RecordBase]::Read($File.FullName) | ConvertTo-Json | Out-File $OutFile.FullName -Encoding utf8BOM
-      Set-Variable -Name OutFile -Value $(Rename-Item $outFile.FullName -NewName ($outFile.BaseName + '.json') -PassThru)
-      $process = [System.Diagnostics.Process]::new()
-      $process.StartInfo.FileName = 'nvim'
-      $process.StartInfo.Arguments = $outFile.FullName
-      $process.StartInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Maximized
-      $process.Start(); $fswatcher = [FileMonitor]::MonitorFile($outFile.FullName, [scriptblock]::Create("Stop-Process -Id $($process.Id) -Force"));
-      if ($null -eq $fswatcher) { Write-Warning "Failed to start FileMonitor"; Write-Host "Waiting nvim process to exit..." $process.WaitForExit() }
-      $private:config_ob = [IO.FILE]::ReadAllText($outFile.FullName) | ConvertFrom-Json
-    } finally {
-      [NetworkManager]::UnblockAllOutbound()
-      if ($fswatcher) { $fswatcher.Dispose() }
-      if ($process) {
-        "[+] Neovim process {0} successfully" -f $(if (!$process.HasExited) {
-            $process.Kill($true)
-            "closed"
-          } else {
-            "exited"
-          }
-        ) | Write-Host -ForegroundColor Green
-        $process.Close()
-        $process.Dispose()
-      }
-      Remove-Item $outFile.FullName -Force
-      if ($UseVerbose) { "[+] FileMonitor Log saved in variable: `$$([fileMonitor]::LogvariableName)" | Write-Host -ForegroundColor Magenta }
-      if ($null -ne $config_ob) { $result = $config_ob.ForEach({ $_ | xconvert ToHashTable }) }
-      if ($UseVerbose) { "[+] Edit Config completed." | Write-Host -ForegroundColor Magenta }
-    }
-    return $result
-  }
-  [void] Save() {
-    $pass = $null;
-    try {
-      Write-Host "$([RecordBase]::caller) Save records to file: $($this.File) ..." -ForegroundColor Blue
-      Set-Variable -Name pass -Scope Local -Visibility Private -Option Private -Value $(if ([xcrypt]::EncryptionScope.ToString() -eq "User") { Read-Host -Prompt "$([RecordBase]::caller) Paste/write a Password to encrypt configs" -AsSecureString } else { [AesGCM]::GetUniqueMachineId() | xconvert ToSecurestring })
-      $this.LastWriteTime = [datetime]::Now; [IO.File]::WriteAllText($this.File, ([AesGCM]::Encrypt($($this.ToByte() | xconvert ToCompressed), $pass) | xconvert ToBase85), [System.Text.Encoding]::UTF8)
-      Write-Host "$([RecordBase]::caller) Save records " -ForegroundColor Blue -NoNewline; Write-Host "Completed." -ForegroundColor Green
-    } catch {
-      throw $_.Exeption
-    } finally {
-      Remove-Variable Pass -Force -ErrorAction SilentlyContinue
-    }
-  }
-  [void] Import([String]$FilePath) {
-    Write-Host "$([RecordBase]::caller) Import records: $FilePath ..." -ForegroundColor Green
-    $this.Set([RecordBase]::Read($FilePath))
-    Write-Host "$([RecordBase]::caller) Import records Complete" -ForegroundColor Green
-  }
-  [byte[]] ToByte() {
-    return $this | xconvert ToBytes
-  }
-  [string] ToString() {
-    $r = $this.ToArray(); $s = ''
-    $shortnr = [scriptblock]::Create({
-        param([string]$str, [int]$MaxLength)
-        while ($str.Length -gt $MaxLength) {
-          $str = $str.Substring(0, [Math]::Floor(($str.Length * 4 / 5)))
-        }
-        return $str
-      }
-    )
-    if ($r.Count -gt 1) {
-      $b = $r[0]; $e = $r[-1]
-      $0 = $shortnr.Invoke("{'$($b.Keys)' = '$($b.values.ToString())'}", 40)
-      $1 = $shortnr.Invoke("{'$($e.Keys)' = '$($e.values.ToString())'}", 40)
-      $s = "@($0 ... $1)"
-    } elseif ($r.count -eq 1) {
-      $0 = $shortnr.Invoke("{'$($r[0].Keys)' = '$($r[0].values.ToString())'}", 40)
-      $s = "@($0)"
-    } else {
-      $s = '@()'
-    }
-    return $s
-  }
-}
 #endregion Classes
 
 # Types that will be available to users when they import the module.
 $typestoExport = @(
-  [CredentialManager]
-  [NetworkManager]
-  [WeatherClient]
-  [GeoCoordinate]
-  [ProgressUtil]
-  [FileMonitor]
-  [FileCryptr]
-  [PsRunner]
-  [GitHub]
-  [xcrypt]
-  [cliart]
-  [AesGCM]
-  [AesCng]
-  [AesCtr]
-  [Gist]
-  [X509]
-  [RSA]
-  [K3Y]
-  [cli]
+  [CredentialManager], [NetworkManager], [WeatherClient], [GeoCoordinate], [color],
+  [ProgressUtil], [FileMonitor], [ShellConfig], [FileCryptr], [dotProfile], [PsRunner], [GitHub], [PsRecord],
+  [xcrypt], [cliart], [AesGCM], [AesCng], [AesCtr], [Gist], [X509], [RSA], [RGB], [K3Y], [cli]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
 foreach ($Type in $typestoExport) {
@@ -526,5 +373,6 @@ $Param = @{
   Function = $Public.BaseName
   Cmdlet   = '*'
   Alias    = '*'
+  Verbose  = $false
 }
 Export-ModuleMember @Param

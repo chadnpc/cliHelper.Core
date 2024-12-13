@@ -1,4 +1,4 @@
-<h1> <img align="right" src="https://github.com/user-attachments/assets/26cd9e5b-d1a7-4822-914d-291d2f67aa3a" width="200" height="200" alt="icon" /></h1>
+<h1> <img align="right" src="https://github.com/user-attachments/assets/160c2204-4a29-47a0-a8fc-a2f441317e58" width="200" height="200" alt="icon" /></h1>
 
 <div align="Left">
   <a href="https://www.powershellgallery.com/packages/cliHelper.core"><b>cliHelper.core</b></a>
