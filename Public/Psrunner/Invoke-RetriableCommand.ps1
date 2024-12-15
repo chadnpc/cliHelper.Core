@@ -14,48 +14,59 @@
   [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ScriptBlock')]
   [OutputType([PSCustomObject])][Alias('Invoke-rtCommand')]
   param (
-    [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'ScriptBlock')]
+    [Parameter(Mandatory = $false, Position = 0, ParameterSetName = '__AllParameterSets')]
+    [string[]]$ComputerName,
+
+    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'ScriptBlock')]
     [Alias('Script')]
     [ScriptBlock]$ScriptBlock,
 
-    [Parameter(Mandatory = $false, Position = 0, ParameterSetName = 'Command')]
-    [Alias('Command', 'CommandPath')]
+    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'Command')]
+    [Alias('Command')]
     [string]$FilePath,
 
-    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = '__AllParameterSets')]
+    [Parameter(Mandatory = $false, Position = 2, ParameterSetName = '__AllParameterSets')]
     [Object[]]$ArgumentList,
 
-    [Parameter(Mandatory = $false, Position = 2, ParameterSetName = '__AllParameterSets')]
-    [CancellationToken]$CancellationToken = [CancellationToken]::None,
 
     [Parameter(Mandatory = $false, Position = 3, ParameterSetName = '__AllParameterSets')]
     [Alias('Retries', 'MaxRetries')]
     [int]$MaxAttempts = 3,
 
     [Parameter(Mandatory = $false, Position = 4, ParameterSetName = '__AllParameterSets')]
-    [int]$MillisecondsAfterAttempt = 500,
+    [uint32[]]$SuccessReturnCodes = @(0, 3010),
 
     [Parameter(Mandatory = $false, Position = 5, ParameterSetName = '__AllParameterSets')]
-    [string]$Message = "Running $('[' + $MyInvocation.MyCommand.Name + ']')"
+    [ValidateNotNullOrEmpty()]
+    [string]$WorkingDirectory,
+
+    # Timeout in milliseconds
+    [Parameter(Mandatory = $false, Position = 6, ParameterSetName = '__AllParameterSets')]
+    [int]$Timeout = 500,
+
+    [Parameter(Mandatory = $false, Position = 7, ParameterSetName = '__AllParameterSets')]
+    [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None,
+
+    [Parameter(Mandatory = $false, Position = 8, ParameterSetName = '__AllParameterSets')]
+    [string]$Message = "Running $('[' + $MyInvocation.MyCommand.Name + ']')",
+
+    [Parameter(Mandatory = $false, Position = 9, ParameterSetName = 'Command')]
+    [switch]$ExpandStrings
   )
   DynamicParam {
     $DynamicParams = [System.Management.Automation.RuntimeDefinedParameterDictionary]::new()
     $attributeCollection = [System.Collections.ObjectModel.Collection[System.Attribute]]::new()
     $attributes = [System.Management.Automation.ParameterAttribute]::new(); $attHash = @{
-      Position                        = 6
+      Position                        = 10
       ParameterSetName                = '__AllParameterSets'
-      Mandatory                       = $False
-      ValueFromPipeline               = $true
-      ValueFromPipelineByPropertyName = $true
+      Mandatory                       = $false
+      ValueFromPipeline               = $false
+      ValueFromPipelineByPropertyName = $false
       ValueFromRemainingArguments     = $true
       HelpMessage                     = 'Allows splatting with arguments that do not apply. Do not use directly.'
       DontShow                        = $False
     }; $attHash.Keys | ForEach-Object { $attributes.$_ = $attHash.$_ }
     $attributeCollection.Add($attributes)
-    # $attributeCollection.Add([System.Management.Automation.ValidateSetAttribute]::new([System.Object[]]$ValidateSetOption))
-    # $attributeCollection.Add([System.Management.Automation.ValidateRangeAttribute]::new([System.Int32[]]$ValidateRange))
-    # $attributeCollection.Add([System.Management.Automation.ValidateNotNullOrEmptyAttribute]::new())
-    # $attributeCollection.Add([System.Management.Automation.AliasAttribute]::new([System.String[]]$Aliases))
     $RuntimeParam = [System.Management.Automation.RuntimeDefinedParameter]::new("IgnoredArguments", [Object[]], $attributeCollection)
     $DynamicParams.Add("IgnoredArguments", $RuntimeParam)
     return $DynamicParams
@@ -81,16 +92,46 @@
         throw
       }
       try {
-        $downloadAttemptStartTime = Get-Date
+        $AttemptStartTime = Get-Date
         if ($PSCmdlet.ShouldProcess("$fxn Retry Attempt # $Attempts/$MaxAttempts ...", ' ', '')) {
           if ($PSCmdlet.ParameterSetName -eq 'Command') {
             try {
-              $Output = & $FilePath $ArgumentList
+              Write-Verbose -Message "Running command line [$FilePath $ArgumentList] on $ComputerName"
+              $Output = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                $VerbosePreference = $using:VerbosePreference
+                $ps = [System.Diagnostics.Process]::new()
+                $ps_startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+                $ps_startInfo.FileName = $Using:FilePath;
+                if ($Using:ArgumentList) {
+                  $ps_startInfo.Arguments = $Using:ArgumentList;
+                  if ($Using:ExpandStrings) {
+                    $ps_startInfo.Arguments = $ExecutionContext.InvokeCommandWithCred.ExpandString($Using:ArgumentList);
+                  }
+                }
+                if ($Using:WorkingDirectory) {
+                  $ps_startInfo.WorkingDirectory = $Using:WorkingDirectory;
+                  if ($Using:ExpandStrings) {
+                    $ps_startInfo.WorkingDirectory = $ExecutionContext.InvokeCommandWithCred.ExpandString($Using:WorkingDirectory);
+                  }
+                }
+                $ps_startInfo.UseShellExecute = $false; # This is critical for installs to function on core servers
+                $ps.StartInfo = $ps_startInfo;
+                Write-Verbose -Message "Starting Process path [$($ps_startInfo.FileName)] - Args: [$($ps_startInfo.Arguments)] - Working dir: [$($Using:WorkingDirectory)]"
+                $null = $ps.Start();
+                if (!$ps) {
+                  throw "Error running program: $($ps.ExitCode)"
+                } else {
+                  $ps.WaitForExit()
+                }
+                # Check the exit code of the process to see if it succeeded.
+                if ($ps.ExitCode -notin $Using:SuccessReturnCodes) {
+                  throw "Error running program: $($ps.ExitCode)"
+                }
+              }
               $IsSuccess = [bool]$?
             } catch {
               $IsSuccess = $false
               $ErrorRecord = $_.Exception.ErrorRecord
-              # Write-Log $_.Exception.ErrorRecord
               Write-Verbose "$fxn Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)"
             }
           } else {
@@ -101,8 +142,7 @@
       } catch {
         $IsSuccess = $false
         $ErrorRecord = [System.Management.Automation.ErrorRecord]$_
-        # Write-Log $_.Exception.ErrorRecord
-        Write-Verbose "$fxn Error encountered after $([math]::Round(($(Get-Date) - $downloadAttemptStartTime).TotalSeconds, 2)) seconds"
+        Write-Verbose "$fxn Error encountered after $([math]::Round(($(Get-Date) - $AttemptStartTime).TotalSeconds, 2)) seconds"
       } finally {
         $Result = [PSCustomObject]@{
           Output      = $Output
@@ -113,8 +153,8 @@
           $ElapsedTime = [math]::Round(($(Get-Date) - $CommandStartTime).TotalSeconds, 2)
           $EndMsg = $(if ($Result.IsSuccess) { "Completed Successfully. Total time elapsed $ElapsedTime" } else { "Completed With Errors. Total time elapsed $ElapsedTime. Check the log file $LogPath" })
         } elseif (!$cancellationToken.IsCancellationRequested -and $Retries -ne 0) {
-          Write-Verbose "$fxn Waiting $MillisecondsAfterAttempt seconds before retrying. Retries left: $Retries"
-          [System.Threading.Thread]::Sleep($MillisecondsAfterAttempt);
+          Write-Verbose "$fxn Waiting $Timeout ms before retrying. Retries left: $Retries"
+          [System.Threading.Thread]::Sleep($Timeout);
         }
         $Attempts++
       }
@@ -127,86 +167,3 @@
     return $Result
   }
 }
-
-<# inspiration
-function Invoke-Program {
-	# .SYNOPSIS
-	# This is a helper function that will invoke the SQL installers via command-line.
-	# .EXAMPLE
-	# PS> Invoke-Program -FilePath C:\file.exe -ComputerName SRV1
-  [CmdletBinding()]
-  [OutputType([System.Management.Automation.PSObject])]
-  param (
-    [Parameter(Mandatory)]
-    [ValidateNotNullOrEmpty()]
-    [string]$FilePath,
-
-    [Parameter(Mandatory)]
-    [string]$ComputerName,
-
-    [Parameter()]
-    [ValidateNotNullOrEmpty()]
-    [string]$ArgumentList,
-
-    [Parameter()]
-    [bool]$ExpandStrings = $false,
-
-    [Parameter()]
-    [ValidateNotNullOrEmpty()]
-    [string]$WorkingDirectory,
-
-    [Parameter()]
-    [ValidateNotNullOrEmpty()]
-    [uint32[]]$SuccessReturnCodes = @(0, 3010)
-  )
-  begin {
-    $ErrorActionPreference = 'Stop'
-  }
-  process {
-    try {
-      Write-Verbose -Message "Acceptable success return codes are [$($SuccessReturnCodes -join ',')]"
-
-      $scriptBlock = {
-        $VerbosePreference = $using:VerbosePreference
-
-        $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo;
-        $processStartInfo.FileName = $Using:FilePath;
-        if ($Using:ArgumentList) {
-          $processStartInfo.Arguments = $Using:ArgumentList;
-          if ($Using:ExpandStrings) {
-            $processStartInfo.Arguments = $ExecutionContext.InvokeCommandWithCred.ExpandString($Using:ArgumentList);
-          }
-        }
-        if ($Using:WorkingDirectory) {
-          $processStartInfo.WorkingDirectory = $Using:WorkingDirectory;
-          if ($Using:ExpandStrings) {
-            $processStartInfo.WorkingDirectory = $ExecutionContext.InvokeCommandWithCred.ExpandString($Using:WorkingDirectory);
-          }
-        }
-        $processStartInfo.UseShellExecute = $false; # This is critical for installs to function on core servers
-        $ps = New-Object System.Diagnostics.Process;
-        $ps.StartInfo = $processStartInfo;
-        Write-Verbose -Message "Starting process path [$($processStartInfo.FileName)] - Args: [$($processStartInfo.Arguments)] - Working dir: [$($Using:WorkingDirectory)]"
-        $null = $ps.Start();
-        if (!$ps) {
-          throw "Error running program: $($ps.ExitCode)"
-        } else {
-          $ps.WaitForExit()
-        }
-
-        # Check the exit code of the process to see if it succeeded.
-        if ($ps.ExitCode -notin $Using:SuccessReturnCodes) {
-          throw "Error running program: $($ps.ExitCode)"
-        }
-      }
-
-      # Run program on specified computer.
-      Write-Verbose -Message "Running command line [$FilePath $ArgumentList] on $ComputerName"
-
-      Invoke-Command -ComputerName $ComputerName -ScriptBlock $scriptblock
-    } catch {
-      $PSCmdlet.ThrowTerminatingError($_)
-    }
-  }
-}
-#>
