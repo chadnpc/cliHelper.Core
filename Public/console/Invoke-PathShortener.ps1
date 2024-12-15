@@ -1,5 +1,6 @@
 function Invoke-PathShortener {
   [CmdletBinding()]
+  [Alias("GetShortPath")]
   param (
     # Path to shorten.
     [Parameter(Position = 0, Mandatory = $false , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
@@ -17,7 +18,7 @@ function Invoke-PathShortener {
     [int]$KeepAfter = 1,
 
     # Path separator character.
-    [Parameter()]
+    [Parameter(Mandatory = $false)]
     [string]$Separator = [System.IO.Path]::DirectorySeparatorChar,
 
     # Truncate character(s). Default is '...'
@@ -26,7 +27,11 @@ function Invoke-PathShortener {
     [string]$TruncateChar = [char]8230
   )
   process {
-    $Path = (Resolve-Path -Path $Path).Path
+    if (![xcrypt]::IsValidUrl($Path)) {
+      $Path = [xcrypt]::GetUnResolvedPath($Path)
+    } else {
+      $PSBoundParameters["separator"] = "/"
+    }
     $splitPath = $Path.Split($Separator, [System.StringSplitOptions]::RemoveEmptyEntries)
     if ($splitPath.Count -gt ($KeepBefore + $KeepAfter)) {
       $outPath = [string]::Empty
