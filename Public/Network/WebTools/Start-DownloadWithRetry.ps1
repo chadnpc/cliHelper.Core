@@ -1,167 +1,138 @@
 function Start-DownloadWithRetry {
+  <#
+    .SYNOPSIS
+      Downloads a file from a specified URL with retries.
 
-  # .SYNOPSIS
-  #     Starts n item Download With Retry
-  # .DESCRIPTION
-  #     A longer description of the function, its purpose, common use cases, etc.
-  # .NOTES
-  #     Information or caveats about the function e.g. 'This function is not supported in Linux'
-  # .EXAMPLE
-  #     $releasesJsonUrl = "https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/6.0/releases.json"
-  #     Start-DownloadWithRetry -Url $releasesJsonUrl -DownloadPath $pwd -Verbose
-  [Alias('DownloadWithRetry')]
-  [CmdletBinding(ConfirmImpact = 'Medium')]
-  [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
+    .DESCRIPTION
+      The Start-DownloadWithRetry cmdlet attempts to download a file from the specified URL to a local path.
+      It includes retry logic for handling transient failures, allowing you to specify the maximum number of retries and the delay between attempts.
+
+    .EXAMPLE
+      Start-DownloadWithRetry -Url "https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_5mb.mp4"
+
+      Downloads a video to mysamplevideo.mp4 from the specified URL to the system's temporary directory.
+
+    .EXAMPLE
+      Start-DownloadWithRetry -Url "https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_5mb.mp4" -Name "mysamplevideo.mp4" -DownloadPath $pwd
+
+      Downloads a video to mysamplevideo.mp4 from the specified URL and saves it as 'mysamplevideo.mp4' in the $pwd directory.
+
+    .EXAMPLE
+      $link = (iwr -Method Get -Uri https://catalog.data.gov/dataset/national-student-loan-data-system-722b0 -SkipHttpErrorCheck -verbose:$false).Links.Where({ $_.href.EndsWith(".xls") })[0].href
+      Start-DownloadWithRetry -Url $link -Retries 3 -SecondsBetweenAttempts 10
+
+      Attempts to download the file with a maximum of 3 retries, waiting 10 seconds between each attempt.
+
+    .EXAMPLE
+      Start-DownloadWithRetry -Url $link -WhatIf
+
+      Displays what would happen if the cmdlet runs without actually downloading the file.
+
+    .EXAMPLE
+      Start-DownloadWithRetry -Url $link -Verbose
+
+      Provides detailed output about the download process, including retry attempts and success/failure messages.
+
+    .NOTES
+      Author: Alain Herve
+      Version: 1.0
+
+    .LINK
+      Online Version: https://github.com/alainQtec/cliHelper.Core/blob/main/Public/Network/WebTools/Start-DownloadWithRetry.ps1
+  #>
+  [Alias('DownloadWithRetry')][OutputType([IO.FileInfo])]
+  [CmdletBinding(ConfirmImpact = 'Medium', SupportsShouldProcess = $true)]
   Param(
+    # Specifies the URL of the file to download. This parameter is mandatory.
     [Parameter(Mandatory = $true, Position = 0)]
-    [Alias('uri')]
+    [ValidateScript({
+        if ([xcrypt]::IsValidUrl($_)) {
+          return $true
+        }; throw [System.ArgumentException]::new("Please Provide a valid URL: $_", "Url")
+      })]
+    [Alias('uri')][ValidateNotNullOrWhiteSpace()]
     [string]$Url,
 
+    # Specifies the name of the file to save locally. If not provided, the file name will be derived from the URL.
     [Parameter(Mandatory = $false, Position = 1)]
-    [Alias('N')]
+    [Alias('n')][ValidateNotNullOrWhiteSpace()]
     [string]$Name,
 
+    # Specifies the local directory where the file will be saved. Defaults to the current directory.
     [Parameter(Mandatory = $false, Position = 2)]
-    [Alias('dlPath')]
-    [string]$DownloadPath = "${env:Temp}",
+    [Alias('dlPath')][ValidateNotNullOrWhiteSpace()]
+    [string]$DownloadPath = (Get-Location).Path,
 
+    # Specifies the maximum number of retry attempts if the download fails. Defaults to 5.
     [Parameter(Mandatory = $false, Position = 3)]
+    [Alias('r')]
     [int]$Retries = 5,
 
+    # Specifies the delay, in seconds, between retry attempts. Defaults to 5 seconds.
     [Parameter(Mandatory = $false, Position = 4)]
+    [Alias('s', 'timeout')]
     [int]$SecondsBetweenAttempts = 5,
 
+    # Specifies a custom message to display during the download process.
     [Parameter(Mandatory = $false, Position = 5)]
-    [string]$Message,
+    [Alias('m')]
+    [string]$Message = "Downloading file",
 
+    # Allows cancellation of the download operation using a System.Threading.CancellationToken.
     [Parameter(Mandatory = $false, Position = 6)]
     [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None
   )
 
-  Begin {
-    [System.Management.Automation.ActionPreference]$eap = $ErrorActionPreference; $ErrorActionPreference = "SilentlyContinue"
-    $fxn = ('[' + $MyInvocation.MyCommand.Name + ']')
+  Process {
     if ([String]::IsNullOrEmpty($Name)) {
       $Name = [IO.Path]::GetFileName($Url)
     }
-    $Url_short = $($Url.substring(0, $([System.Console]::WindowWidth / 4)))
-    #region Classes
-    class DownloadClient {
-      [ValidateNotNullOrEmpty()][string]$Url
-      [ValidateNotNullOrEmpty()][string]$FilePath
-
-      $sw = [System.Diagnostics.Stopwatch]::new();
-      DownloadClient() {}
-      DownloadClient([string]$Url, [string]$FilePath) {
-        [Uri]$this.Url = GetUrl($Url)
-      }
-      DownloadClient([Uri]$Url, [string]$FilePath) {
-        [Uri]$this.Url = GetUrl($Url)
-      }
-      DownloadClient([Uri]$Url, [IO.FileInfo]$FilePath) {
-        [Uri]$this.Url = GetUrl($Url)
-      }
-      [Uri]GetUrl($Url) {
-        $comparison = [System.StringComparison]::OrdinalIgnoreCase
-        $This.Url = $Url.ToString()
-        $Uri = if ($Url.StartsWith("http://", $comparison) -or $Url.StartsWith("https://", $comparison)) { [Uri]::new($Url) } else { [Uri]::new("https://" + $Url) }
-        return $Uri
-      }
-      [void]DownloadFile([Uri]$urlAddress, [string]$location, [System.Diagnostics.Stopwatch]$sw) {
-        $webClient = [System.Net.WebClient]::new();
-        # $webClient.DownloadFileCompleted =+ [System.ComponentModel.AsyncCompletedEventHandler]::new([System.Object]$object, [System.IntPtr]$method);
-        # $webClient.DownloadProgressChanged += [System.Net.DownloadProgressChangedEventHandler]::new([System.Object]$object, [System.IntPtr]$method);
-        $sw.Start();
+    $OutputFilePath = [IO.Path]::Combine([xcrypt]::GetUnResolvedPath($DownloadPath), $Name)
+    $url_verbose_txt = $url | Invoke-PathShortener
+    $outfile_verbose_txt = $OutputFilePath | Invoke-PathShortener
+    $DownloadScript = {
+      param($Url, $FilePath)
+      try {
+        $file_name = $FilePath | Split-Path -Leaf
+        $verbose ? (Write-RGB "  Attempting to download '$url_verbose_txt' to '$file_name'..." -f SteelBlue) : $null
+        $WebClient = [System.Net.WebClient]::new()
         try {
-          $webClient.DownloadFile($urlAddress, $location);
-        } catch [System.Net.WebException], [System.IO.IOException] {
-          # Write-Log $_.Exception.ErrorRecord
-          # Out-Verbose $fxn "Unable to download '$Name' from '$Url_short...'"
-          $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]$_)
-        } catch {
-          # Write-Log $_.Exception.ErrorRecord
-          # Out-Verbose $fxn "Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)"
-          $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]$_)
+          $WebClient.DownloadFile($Url, $FilePath)
+          if (!(Test-Path -Path $FilePath -ErrorAction Ignore)) {
+            throw "File not found after download attempt."
+          }
+          $verbose ? (Write-RGB "  Successfully downloaded $file_name to '$outfile_verbose_txt'." -f SteelBlue) : $null
+          return $FilePath
+        } finally {
+          $WebClient.Dispose()
         }
-      }
-      [void]DownloadFileAsync([Uri]$urlAddress, [String]$location, [System.Diagnostics.Stopwatch]$sw) {
-        $webClient = [System.Net.WebClient]::new();
-        # $webClient.DownloadFileCompleted =+ [System.ComponentModel.AsyncCompletedEventHandler]::new([System.Object]$object, [System.IntPtr]$method);
-        # $webClient.DownloadProgressChanged += [System.Net.DownloadProgressChangedEventHandler]::new([System.Object]$object, [System.IntPtr]$method);
-        $sw.Start();
-        try {
-          $webClient.DownloadFileAsync($urlAddress, $location);
-        } catch [System.Net.WebException], [System.IO.IOException] {
-          # Write-Log $_.Exception.ErrorRecord
-          # Out-Verbose $fxn "Unable to download '$Name' from '$Url_short...'"
-          $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]$_)
-        } catch {
-          # Write-Log $_.Exception.ErrorRecord
-          # Out-Verbose $fxn "Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)"
-          $PSCmdlet.WriteError([System.Management.Automation.ErrorRecord]$_)
-        }
-      }
-      hidden [void]ProgressChanged([System.Object]$sendr, [System.Net.DownloadProgressChangedEventArgs]$e, [System.Diagnostics.Stopwatch]$sw) {
-        # Calculate download speed and output it to labelSpeed.
-        $SpeedText = [string]::Format("{0} kb/s", $($e.BytesReceived / 1024d / $sw.Elapsed.TotalSeconds));
-        # Show the percentage on our label.
-        $Perc = $e.ProgressPercentage.ToString() + "%";
-        # Update the label with how much data have been downloaded so far and the total size of the file we are currently downloading
-        $totdL = [string]::Format("{0} MB / {1} MB", $($e.BytesReceived / 1048576), $($e.TotalBytesToReceive / 1048576));
-        [System.console]::writeLine("$totdL $SpeedText $Perc");
-      }
-      hidden [void]Completed([System.Object]$sendr, [System.ComponentModel.AsyncCompletedEventArgs]$e, [System.Diagnostics.Stopwatch]$sw) {
-        $sw.Reset();
-        if ($e.Cancelled -eq $true) {
-          [System.console]::writeLine("Download has been canceled.");
-        } else {
-          [System.console]::writeLine("Download completed.");
-        }
+      } catch {
+        Write-RGB "Error occurred: $_" -f Salmon
+        throw $_
       }
     }
-    #endregion
-    $downloadScript = [ScriptBlock]::Create({
-        try {
-          $filePath = Join-Path -Path $DownloadPath -ChildPath $Name
-          $WebClient = [System.Net.WebClient]::new()
-          $WebClient.DownloadFile($Url, $filePath)
-        } catch [System.Net.WebException], [System.IO.IOException] {
-          # Write-Log $_.Exception.ErrorRecord
-          Out-Verbose $fxn "Unable to download '$Name' from '$Url_short...'"
-          throw $_
-        } catch {
-          # Write-Log $_.Exception.ErrorRecord
-          Out-Verbose $fxn "Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)"
-          throw $_
-        }
-        if ([IO.File]::Exists($filePath)) {
-          return $filePath
-        } else {
-          return [string]::Empty
-        }
-      }
-    )
-  }
 
-  Process {
-    Write-Invocation $MyInvocation
-    if ([string]::IsNullOrEmpty($Message)) { $Message = "Downloading '$Name' from '$Url_short...'" }
     try {
-      if ([bool]$VerbosePreference.Equals('Continue')) {
-        $Command = Invoke-RetriableCommand -ScriptBlock $downloadScript -MaxRetries $Retries -Message $Message -CancellationToken $CancellationToken -SecondsBetweenAttempts $SecondsBetweenAttempts -Verbose
-      } else {
-        $Command = Invoke-RetriableCommand -ScriptBlock $downloadScript -MaxRetries $Retries -Message $Message -CancellationToken $CancellationToken -SecondsBetweenAttempts $SecondsBetweenAttempts
+      $SplatParams = @{
+        ScriptBlock            = $DownloadScript
+        ArgumentList           = @($Url, $OutputFilePath)
+        MaxAttempts            = $Retries
+        SecondsBetweenAttempts = $SecondsBetweenAttempts
+        Message                = $Message
+        CancellationToken      = $CancellationToken
+        Verbose                = $VerbosePreference
       }
-      if (!$Command.IsSuccess) {
-        throw $Command.ErrorRecord
-      }
+      $null = Invoke-RetriableCommand @SplatParams
     } catch {
       throw $_
     }
   }
-  End {
-    Out-Verbose $fxn "Completed $(if ($Command.IsSuccess) { 'Successfully' } else {'With Errors'})"
-    $ErrorActionPreference = $eap;
-    return $Command.Output
+
+  end {
+    if ([IO.File]::Exists($OutputFilePath)) {
+      return Get-Item $OutputFilePath
+    } else {
+      return [IO.FileInfo]::new($OutputFilePath)
+    }
   }
 }
