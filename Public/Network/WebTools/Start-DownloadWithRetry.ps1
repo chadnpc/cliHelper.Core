@@ -84,31 +84,60 @@ function Start-DownloadWithRetry {
   )
 
   Process {
-    if ([String]::IsNullOrEmpty($Name)) {
-      $Name = [IO.Path]::GetFileName($Url)
-    }
+    if ([String]::IsNullOrEmpty($Name)) { $Name = [IO.Path]::GetFileName($Url) }
     $OutputFilePath = [IO.Path]::Combine([xcrypt]::GetUnResolvedPath($DownloadPath), $Name)
     $url_verbose_txt = $url | Invoke-PathShortener
     $outfile_verbose_txt = $OutputFilePath | Invoke-PathShortener
+    $GetfileSize = {
+      param([long]$Bytes)
+      switch ($bytes) {
+        { $bytes -lt 1MB } { return "$([Math]::Round($bytes / 1KB, 2)) KB" }
+        { $bytes -lt 1GB } { return "$([Math]::Round($bytes / 1MB, 2)) MB" }
+        { $bytes -lt 1TB } { return "$([Math]::Round($bytes / 1GB, 2)) GB" }
+        Default { return "$([Math]::Round($bytes / 1TB, 2)) TB" }
+      }
+    }
     $DownloadScript = {
-      param($Url, $FilePath)
+      param([uri]$Uri, [string]$FilePath)
       try {
         $file_name = $FilePath | Split-Path -Leaf
-        $verbose ? (Write-RGB "  Attempting to download '$url_verbose_txt' to '$file_name'..." -f SteelBlue) : $null
-        $WebClient = [System.Net.WebClient]::new()
-        try {
-          $WebClient.DownloadFile($Url, $FilePath)
-          if (!(Test-Path -Path $FilePath -ErrorAction Ignore)) {
-            throw "File not found after download attempt."
+        $webClient = [System.Net.WebClient]::new()
+        # $webClient.Credentials = $login
+        $task = $webClient.DownloadFileTaskAsync($Uri, $FilePath)
+        Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -SourceIdentifier WebClient.DownloadProgressChanged | Out-Null
+        $verbose ? (Write-RGB "  Attempting to download '$url_verbose_txt' to '$outfile_verbose_txt'..." -f SteelBlue) : $null
+        $dlEvent = [PsObject]::new()
+        $dlEvent.PsObject.Properties.Add([PSScriptProperty]::new('Data', {
+              $e = Get-Event -SourceIdentifier WebClient.DownloadProgressChanged -ea Ignore
+              if ($e) {
+                return $e[-1].SourceEventArgs
+              }; return $null
+            }
+          )
+        )
+        While (!$task.IsCompleted) {
+          if ($null -ne $dlEvent.Data) {
+            $ReceivedData = $dlEvent.Data.BytesReceived
+            $TotalToReceive = $dlEvent.Data.TotalBytesToReceive
+            $TotalPercent = $dlEvent.Data.ProgressPercentage
+            Write-Progress -Activity "$Message" -Status "Percent Complete: $TotalPercent%" -CurrentOperation "Downloaded $($GetfileSize.Invoke($ReceivedData)) / $($GetfileSize.Invoke($TotalToReceive))" -PercentComplete $TotalPercent
           }
-          $verbose ? (Write-RGB "  Successfully downloaded $file_name to '$outfile_verbose_txt'." -f SteelBlue) : $null
-          return $FilePath
-        } finally {
-          $WebClient.Dispose()
+          [System.Threading.Thread]::Sleep(50)
         }
       } catch {
         Write-RGB "Error occurred: $_" -f Salmon
         throw $_
+      } finally {
+        Write-Progress -Activity "Finished downloading file '$file_name'" -Status Complete -Completed
+        if ([IO.File]::Exists($FilePath)) {
+          $verbose ? (Write-RGB "  Successfully downloaded to '$FilePath'" -f SteelBlue) : $null
+        }
+        Invoke-Command { Unregister-Event -SourceIdentifier WebClient.DownloadProgressChanged -Force -ea Ignore; $webClient.Dispose() } -ea Ignore
+      }
+      if ([IO.File]::Exists($FilePath)) {
+        return Get-Item $FilePath
+      } else {
+        return [IO.FileInfo]::new($FilePath)
       }
     }
 
@@ -122,17 +151,13 @@ function Start-DownloadWithRetry {
         CancellationToken      = $CancellationToken
         Verbose                = $VerbosePreference
       }
-      $null = Invoke-RetriableCommand @SplatParams
+      $result = Invoke-RetriableCommand @SplatParams
     } catch {
       throw $_
     }
   }
 
   end {
-    if ([IO.File]::Exists($OutputFilePath)) {
-      return Get-Item $OutputFilePath
-    } else {
-      return [IO.FileInfo]::new($OutputFilePath)
-    }
+    return $result.Output
   }
 }
