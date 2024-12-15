@@ -12,7 +12,7 @@ function Invoke-RetriableCommand {
     In the return value, example: $result.HasErrors tells you if there were any errors during retries.
     See: Get-Help Invoke-RetriableCommand -Examples
   .EXAMPLE
-   # Run a simple ScriptBlock with retry attempts
+   # Run a simple ScriptBlock with Attempts
    $result = Invoke-RetriableCommand -ScriptBlock {
        Write-Output "Running retry test..."
        Start-Sleep -Seconds 1
@@ -177,7 +177,7 @@ function Invoke-RetriableCommand {
       $Result = [Result]::new()
       try {
         $AttemptStartTime = Get-Date
-        $verbose ? (Write-RGB "$fxn Retry Attempt # $Attempts/$MaxAttempts ..." -f $cmdColors.Progress) : $null
+        $verbose ? (Write-RGB "$fxn Attempt # $Attempts/$MaxAttempts ..." -f $cmdColors.Progress) : $null
         if ($PSCmdlet.ParameterSetName -eq 'Command') {
           try {
             $verbose ? (Write-RGB "Running command line [$FilePath $ArgumentList] on $ComputerName" -f LemonChiffon) : $null
