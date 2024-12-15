@@ -392,6 +392,9 @@ class xcrypt {
   static [bool] IsValidAES([System.Security.Cryptography.Aes]$aes) {
     return [bool]$(try { [xcrypt]::CheckProps($aes); $? } catch { $false })
   }
+  static [bool] IsValidUrl([string]$url) {
+    return $url -match '(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})'
+  }
   static [void] CheckProps([System.Security.Cryptography.Aes]$Aes) {
     $MissingProps = @(); $throw = $false
     Write-Verbose "$([xcrypt]::caller) [+] Checking Encryption Properties ... $(('Mode','Padding', 'keysize', 'BlockSize') | ForEach-Object { if ($null -eq $Aes.Algo.$_) { $MissingProps += $_ } };
