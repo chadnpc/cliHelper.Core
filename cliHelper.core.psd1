@@ -52,6 +52,7 @@
   FormatsToProcess      = @()
   RequiredModules       = @(
     'cliHelper.xconvert'
+    'cliHelper.xcrypt'
     # Twilio
   )
   CmdletsToExport       = '*'

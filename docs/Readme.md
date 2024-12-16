@@ -2,9 +2,7 @@
 <!-- Versioning guidelines:
 
 1. Patch Releases (Bug Fixes, Minor Changes):
-- 0.1.7
-- 0.1.7
-- 0.1.7
+- 0.1. 7
 
 2. Minor Version Releases (New Features, Backwards-Compatible):
 - 0.2.0
