@@ -17,17 +17,16 @@ enum BarSymbol {
   Circle = 9679
 }
 
-# .SYNOPSIS
-# A simple progress utility class
-# .EXAMPLE
-# $OgForeground = (Get-Variable host).Value.UI.RawUI.ForegroundColor
-# (Get-Variable host).Value.UI.RawUI.ForegroundColor = [ConsoleColor]::Green
-# for ($i = 0; $i -le 100; $i++) {
-#     [ProgressUtil]::WriteProgressBar($i)
-#     [System.Threading.Thread]::Sleep(50)
-# }
-# (Get-Variable host).Value.UI.RawUI.ForegroundColor = $OgForeground
-# [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 })
+<#
+.SYNOPSIS
+  A simple progress utility class
+.EXAMPLE
+  for ($i = 0; $i -le 100; $i++) {
+    [ProgressUtil]::WriteProgressBar($i, "doing stuff")
+  }
+.EXAMPLE
+  [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 })
+#>
 class ProgressUtil {
   static hidden [string] $_block = '■';
   static hidden [string] $_back = "`b";
@@ -45,26 +44,37 @@ class ProgressUtil {
   static hidden [int] $_twirlIndex = 0
   static hidden [string]$frames
   static [void] WriteProgressBar([int]$percent) {
-    [ProgressUtil]::WriteProgressBar($percent, $true)
+    [ProgressUtil]::WriteProgressBar($percent, $true, "")
   }
-  static [void] WriteProgressBar([int]$percent, [bool]$update) {
-    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([Console]::WindowWidth * 0.7))
+  static [void] WriteProgressBar([int]$percent, [string]$message) {
+    [ProgressUtil]::WriteProgressBar($percent, $true, $message)
   }
-  static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength) {
+  static [void] WriteProgressBar([int]$percent, [bool]$update, [string]$message) {
+    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([Console]::WindowWidth * 0.7), $message)
+  }
+  static [void] WriteProgressBar([int]$percent, [bool]$update, [string]$message, [bool]$Completed) {
+    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([Console]::WindowWidth * 0.7), $message, $Completed)
+  }
+  static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength, [string]$message) {
+    [ProgressUtil]::WriteProgressBar($percent, $update, $PBLength, $message, $false)
+  }
+  static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength, [string]$message, [bool]$Completed) {
     [ValidateNotNull()][int]$PBLength = $PBLength
     [ValidateNotNull()][int]$percent = $percent
     [ValidateNotNull()][bool]$update = $update
+    [ValidateNotNull()][string]$message = $message
     [ProgressUtil]::_back = "`b" * [Console]::WindowWidth
     if ($update) { [Console]::Write([ProgressUtil]::_back) }
-    [Console]::Write("["); $p = [int](($percent / 100.0) * $PBLength + 0.5)
+    Write-Console ("{0} [" -f $message) -f SlateBlue -NoNewLine
+    $p = [int](($percent / 100.0) * $PBLength + 0.5)
     for ($i = 0; $i -lt $PBLength; $i++) {
       if ($i -ge $p) {
-        [Console]::Write(' ');
+        Write-Console ' ' -NoNewLine
       } else {
-        [Console]::Write([ProgressUtil]::_block);
+        Write-Console ([ProgressUtil]::_block) -f SlateBlue -NoNewLine
       }
     }
-    [Console]::Write("] {0,3:##0}%", $percent);
+    Write-Console ("] {0,3:##0}%" -f $percent) -f SlateBlue -NoNewLine:(!$Completed)
   }
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$Job) {
     return [ProgressUtil]::WaitJob($progressMsg, $(Start-Job -ScriptBlock $Job))
@@ -101,37 +111,6 @@ class ProgressUtil {
   }
 }
 
-class ProgressBar {
-  [ValidateNotNullOrEmpty()][string]$Status
-  [ValidateNotNullOrEmpty()][string]$Activity
-  [validaterange(0, 100)][int]$PercentComplete
-
-  ProgressBar([string]$activity) {
-    $this.Activity = $activity
-    $this.Status = "Starting..."
-    $this.PercentComplete = 0
-  }
-  [void] Start() { $this.Start("Initializing...") }
-  [void] Start([string]$initialStatus) {
-    $this.Status = $initialStatus
-    $this.PercentComplete = 0
-    $this.DisplayProgress()
-  }
-  [void] Update([int]$progress) {
-    $this.Update($progress, "In Progress")
-  }
-  [void] Update([int]$progress, [string]$status) {
-    $this.PercentComplete = [math]::Min($progress, 100)
-    $this.Status = $status
-    $this.DisplayProgress()
-  }
-  [void] Complete() { $this.Complete("Complete") }
-  [void] Complete([string]$finalStatus) {
-    $this.PercentComplete = 100
-    $this.Status = $finalStatus
-    $this.DisplayProgress()
-  }
-}
 class StackTracer {
   static [System.Collections.Concurrent.ConcurrentStack[string]]$stack = [System.Collections.Concurrent.ConcurrentStack[string]]::new()
   static [System.Collections.Generic.List[hashtable]]$CallLog = @()

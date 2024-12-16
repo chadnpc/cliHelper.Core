@@ -169,18 +169,18 @@ function Invoke-RetriableCommand {
   process {
     $Attempts = 1; $Results = [Results]::new()
     if ($PsBoundParameters.ContainsKey("Message")) {
-      Write-RGB "$fxn $Message" -f $cmdColors.Information
+      Write-Console "$fxn $Message" -f $cmdColors.Information
     }
     while (($Attempts -le $MaxAttempts) -and !$Results.IsSuccess) {
       $CommandStartTime = Get-Date; $Retries = $MaxAttempts - $Attempts
-      if ($cancellationToken.IsCancellationRequested) { $verbose ? (Write-RGB "$fxn CancellationRequested when $Retries retries were left." -f $cmdColors.Verbose) : $null; throw }
+      if ($cancellationToken.IsCancellationRequested) { $verbose ? (Write-Console "$fxn CancellationRequested when $Retries retries were left." -f $cmdColors.Verbose) : $null; throw }
       $Result = [Result]::new()
       try {
         $AttemptStartTime = Get-Date
-        $verbose ? (Write-RGB "$fxn Attempt # $Attempts/$MaxAttempts ..." -f $cmdColors.Progress) : $null
+        $verbose ? (Write-Console "$fxn Attempt # $Attempts/$MaxAttempts ..." -f $cmdColors.Progress) : $null
         if ($PSCmdlet.ParameterSetName -eq 'Command') {
           try {
-            $verbose ? (Write-RGB "Running command line [$FilePath $ArgumentList] on $ComputerName" -f LemonChiffon) : $null
+            $verbose ? (Write-Console "Running command line [$FilePath $ArgumentList] on $ComputerName" -f LemonChiffon) : $null
             $Result.Output += Invoke-Command -ComputerName $ComputerName -ScriptBlock {
               $VerbosePreference = $using:VerbosePreference
               $WhatIfPreference = $using:WhatIfPreference
@@ -201,7 +201,7 @@ function Invoke-RetriableCommand {
               }
               $ps_startInfo.UseShellExecute = $false; # This is critical for installs to function on core servers
               $ps.StartInfo = $ps_startInfo;
-              $verbose ? (Write-RGB "Starting Process path [$($ps_startInfo.FileName)] - Args: [$($ps_startInfo.Arguments)] - Working dir: [$($Using:WorkingDirectory)]" -f LemonChiffon) : $null
+              $verbose ? (Write-Console "Starting Process path [$($ps_startInfo.FileName)] - Args: [$($ps_startInfo.Arguments)] - Working dir: [$($Using:WorkingDirectory)]" -f LemonChiffon) : $null
               $null = $ps.Start();
               if (!$ps) {
                 throw "Error running program: $($ps.ExitCode)"
@@ -217,7 +217,7 @@ function Invoke-RetriableCommand {
           } catch {
             $Result.IsSuccess = $false
             $Result.ErrorRecord = $_.Exception.ErrorRecord
-            $verbose ? (Write-RGB "$fxn Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)" -f LemonChiffon) : $null
+            $verbose ? (Write-Console "$fxn Errored: $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)" -f LemonChiffon) : $null
           }
         } else {
           $Result.Output += Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
@@ -226,13 +226,13 @@ function Invoke-RetriableCommand {
       } catch {
         $Result.IsSuccess = $false
         $Result.ErrorRecord = [System.Management.Automation.ErrorRecord]$_
-        $verbose ? (Write-RGB "$fxn Error after $([math]::Round(($(Get-Date) - $AttemptStartTime).TotalSeconds, 2)) seconds:" -f $cmdColors.Verbose) : $null
-        $verbose ? (Write-RGB "   $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)" -f $cmdColors.Error) : $null
+        $verbose ? (Write-Console "$fxn Error after $([math]::Round(($(Get-Date) - $AttemptStartTime).TotalSeconds, 2)) seconds:" -f $cmdColors.Verbose) : $null
+        $verbose ? (Write-Console "   $($_.CategoryInfo.Category) : $($_.CategoryInfo.Reason) : $($_.Exception.Message)" -f $cmdColors.Error) : $null
       } finally {
         $Result.ET = [math]::Round(($(Get-Date) - $CommandStartTime).TotalSeconds, 2)
         [void]$Results.Add($Result)
         if (!$cancellationToken.IsCancellationRequested -and ($Retries -ne 0) -and !$Result.IsSuccess) {
-          $verbose ? (Write-RGB "$fxn Waiting $Timeout ms before retrying. Retries left: $Retries" -f $cmdColors.Verbose) : $null
+          $verbose ? (Write-Console "$fxn Waiting $Timeout ms before retrying. Retries left: $Retries" -f $cmdColors.Verbose) : $null
           [System.Threading.Thread]::Sleep($Timeout);
         }
         $Attempts++
@@ -251,7 +251,7 @@ function Invoke-RetriableCommand {
         m = "$Message Completed Successfully. Total time elapsed $($Results.ElapsedTime)".Trim()
       }
     }[[int]$Results.IsSuccess]
-    Write-RGB "$fxn $($e.m)" -f $cmdColors.($e.c)
+    Write-Console "$fxn $($e.m)" -f $cmdColors.($e.c)
     $ErrorActionPreference = $eap;
     return $Results
   }

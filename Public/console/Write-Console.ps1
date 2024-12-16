@@ -1,26 +1,26 @@
-function Write-RGB {
+function Write-Console {
   # .SYNOPSIS
   #   Writes to the console in 24-bit colors.
   # .DESCRIPTION
-  #   This function lets you write to the console using 24-bit color depth.
+  #   Writes colored output on the console using 24-bit color depth.
   #   You can specify colors using color names or RGB values.
   # .EXAMPLE
-  #   Write-RGB 'Hello World'
+  #   Write-Console 'Hello World'
   #   Will write the Object using the default colors.
   # .EXAMPLE
-  #   Write-RGB 'Hello world' -f Pink
+  #   Write-Console 'Hello world' -f Pink
   #   Will write the Object in a pink foreground color.
   # .EXAMPLE
-  #   [string]::Join([char]10, (tree | Out-String)) | Write-RGB -f SlateBlue
+  #   [string]::Join([char]10, (tree | Out-String)) | Write-Console -f SlateBlue
   #   Will write the string result of the tree command in a SlateBlue foreground color.
   # .LINK
-  #   https://github.com/alainQtec/cliHelper.Core/blob/main/Public/console/Write-RGB.ps1
+  #   https://github.com/alainQtec/cliHelper.Core/blob/main/Public/console/Write-Console.ps1
   # .INPUTS
   #   String
   # .OUTPUTS
   #   String to pipline if -Passthru is used.
   [CmdletBinding(DefaultParameterSetName = 'Name')]
-  [OutputType([string])]
+  [OutputType([string])][Alias('Write-RGB')]
   param (
     # The Object you want to write.
     [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = '__AllParameterSets')]
@@ -89,7 +89,7 @@ function Write-RGB {
     $DynamicParams = [System.Management.Automation.RuntimeDefinedParameterDictionary]::new()
     $attributeCollection = [System.Collections.ObjectModel.Collection[System.Attribute]]::new()
     $attributes = [System.Management.Automation.ParameterAttribute]::new(); $attHash = @{
-      Position                        = 5
+      Position                        = 6
       ParameterSetName                = '__AllParameterSets'
       Mandatory                       = $False
       ValueFromPipeline               = $true
@@ -121,10 +121,10 @@ function Write-RGB {
         $b = "$($escape)48;2;$($Background.Red);$($Background.Green);$($Background.Blue)m"
       }
     }
-    if ([bool](Get-Command Write-Host -ErrorAction SilentlyContinue)) {
-      Write-Host ($f + $b + $Text + $resetAttributes) -NoNewline:($NoNewLine.IsPresent)
+    if (!$NoNewLine.IsPresent) {
+      [System.Console]::WriteLine(($f + $b + $Text + $resetAttributes))
     } else {
-      Write-Host ($f + $b + $Text + $resetAttributes) -NoNewline:($NoNewLine.IsPresent)
+      [System.Console]::Write(($f + $b + $Text + $resetAttributes))
     }
   }
   End {

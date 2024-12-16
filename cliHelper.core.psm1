@@ -113,7 +113,7 @@ class cli {
 #  $art = [cliart]::Create((Get-Item ./ascii))
 # .EXAMPLE
 #  $a = [cliart]"/home/alain/Documents/GitHub/clihelper_modules/cliHelper.core/Tests/cliart_test.txt/hacker"
-#  Write-RGB -Text $a -f SpringGreen
+#  Write-Console -Text $a -f SpringGreen
 #  $print_expression = $a.GetPrinter()
 #  Now instead of hard coding the content of the art file, you can use $print_expression anywhere in your script
 class cliart {

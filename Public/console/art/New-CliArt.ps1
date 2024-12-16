@@ -3,10 +3,17 @@
   [CmdletBinding()]
   [OutputType([CliArt])]
   param (
-    [Parameter(Mandatory = $true, Position = 0)]
-    [string]$Base64String
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'fromfile')]
+    [string]$FilePath,
+
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'bytes')]
+    [byte[]]$bytes
   )
   process {
-    return [CliArt]::new($Base64String)
+    if ($PSCmdlet.ParameterSetName -eq 'fromfile') {
+      return [CliArt]::new($FilePath)
+    } else {
+      return [CliArt]::new($bytes)
+    }
   }
 }

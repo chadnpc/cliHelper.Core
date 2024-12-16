@@ -491,7 +491,7 @@ class dotProfile {
       # show Banner # or 'Message Of The Day' ...
       if (($IsSuccess -eq $true) -and [dotProfile]::config.dotProfile.IsLoaded) {
         Write-Host ''
-        Write-RGB $([dotProfile]::Banner) -ForegroundColor SlateBlue -BackgroundColor Black;
+        Write-Console $([dotProfile]::Banner) -ForegroundColor SlateBlue -BackgroundColor Black;
         Write-Host ''
       }
     } catch {

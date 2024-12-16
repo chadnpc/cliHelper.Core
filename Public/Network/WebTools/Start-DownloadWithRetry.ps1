@@ -97,6 +97,7 @@ function Start-DownloadWithRetry {
         Default { return "$([Math]::Round($bytes / 1TB, 2)) TB" }
       }
     }
+    $dlEvent = [PSCustomObject]@{ size_str = [string]::Empty }
     $DownloadScript = {
       param([uri]$Uri, [string]$FilePath)
       try {
@@ -105,8 +106,7 @@ function Start-DownloadWithRetry {
         # $webClient.Credentials = $login
         $task = $webClient.DownloadFileTaskAsync($Uri, $FilePath)
         Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -SourceIdentifier WebClient.DownloadProgressChanged | Out-Null
-        $verbose ? (Write-RGB "  Attempting to download '$url_verbose_txt' to '$outfile_verbose_txt'..." -f SteelBlue) : $null
-        $dlEvent = [PsObject]::new()
+        $verbose ? (Write-Console "  Attempting to download '$url_verbose_txt' to '$outfile_verbose_txt'..." -f SteelBlue) : $null
         $dlEvent.PsObject.Properties.Add([PSScriptProperty]::new('Data', {
               $e = Get-Event -SourceIdentifier WebClient.DownloadProgressChanged -ea Ignore
               if ($e) {
@@ -120,17 +120,20 @@ function Start-DownloadWithRetry {
             $ReceivedData = $dlEvent.Data.BytesReceived
             $TotalToReceive = $dlEvent.Data.TotalBytesToReceive
             $TotalPercent = $dlEvent.Data.ProgressPercentage
-            Write-Progress -Activity "$Message" -Status "Percent Complete: $TotalPercent%" -CurrentOperation "Downloaded $($GetfileSize.Invoke($ReceivedData)) / $($GetfileSize.Invoke($TotalToReceive))" -PercentComplete $TotalPercent
+            if ($null -ne $ReceivedData) {
+              $dlEvent.size_str = "{0} / {1}" -f $($GetfileSize.Invoke($ReceivedData)), $($GetfileSize.Invoke($TotalToReceive))
+              [ProgressUtil]::WriteProgressBar([int]$TotalPercent, "  Downloading : $($dlEvent.size_str)")
+            }
           }
           [System.Threading.Thread]::Sleep(50)
         }
       } catch {
-        Write-RGB "Error occurred: $_" -f Salmon
+        Write-Console "Error occurred: $_" -f Salmon
         throw $_
       } finally {
-        Write-Progress -Activity "Finished downloading file '$file_name'" -Status Complete -Completed
+        [ProgressUtil]::WriteProgressBar(100, $true, "  Downloaded $($dlEvent.size_str)", $true)
         if ([IO.File]::Exists($FilePath)) {
-          $verbose ? (Write-RGB "  Successfully downloaded to '$FilePath'" -f SteelBlue) : $null
+          $verbose ? (Write-Console "  OutPath: '$FilePath'" -f SteelBlue) : $null
         }
         Invoke-Command { Unregister-Event -SourceIdentifier WebClient.DownloadProgressChanged -Force -ea Ignore; $webClient.Dispose() } -ea Ignore
       }
