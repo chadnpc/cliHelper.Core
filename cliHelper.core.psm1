@@ -237,13 +237,21 @@ class RGB {
   [ValidateRange(0, 255)]
   [int]$Blue
   RGB() {}
-  RGB($r, $g, $b) {
+  RGB([string]$Name) {
+    $IsValid = [color].GetProperties().Name.Contains($Name)
+    if (!$IsValid) { throw [System.InvalidCastException]::new("Color name '$Name' is not valid. See: [color].GetProperties().Name") }
+    [RGB]$c = [color]::$Name
+    $this.Red = $c.Red
+    $this.Green = $c.Green
+    $this.Blue = $c.Blue
+  }
+  RGB([int]$r, [int]$g, [int]$b) {
     $this.Red = $r
     $this.Green = $g
     $this.Blue = $b
   }
   [string] ToString() {
-    return "$($this.Red),$($this.Green),$($this.Blue)"
+    return [color].GetProperties().Name.Where({ [color]::$_ -eq $this })
   }
 }
 
@@ -749,43 +757,73 @@ class cli {
 #  $print_expression = $a.GetPrinter()
 #  Now instead of hard coding the content of the art file, you can use $print_expression anywhere in your script
 class cliart {
-  hidden [string] $cstr
   hidden [list[string]] $taglines = @()
+  hidden [ValidateNotNullOrWhiteSpace()][string] $cstr
   cliart() { }
   cliart([byte[]]$bytes) { [void][cliart]::_init_($bytes, [ref]$this) }
-  cliart([string]$b64str) {
-    if ([xcrypt]::IsBase64String($b64str)) {
-      [void][cliart]::_init_($b64str, [ref]$this)
-    } else {
-      if ([IO.Path]::IsPathFullyQualified($b64str)) {
-        $this.cstr = [cliart]::Create((Get-Item $b64str)).cstr
-      }
-    }
-  }
+  cliart([string]$string) { [void][cliart]::_init_($string, [string[]]@(), [ref]$this) }
   cliart([IO.FileInfo]$file) { [void][cliart]::_init_($file, [ref]$this) }
 
   static [cliart] Create([byte[]]$bytes) { return [cliart]::_init_($bytes, [ref][cliart]::new()) }
-  static [cliart] Create([string]$b64str) { return [cliart]::_init_($b64str, [ref][cliart]::new()) }
-  static [cliart] Create([string]$b64str, [string[]]$taglines) { return [cliart]::_init_($b64str, $taglines, [ref][cliart]::new()) }
+  static [cliart] Create([string]$string) { return [cliart]::_init_($string, [ref][cliart]::new()) }
   static [cliart] Create([IO.FileInfo]$file) { return [cliart]::_init_($file, [ref][cliart]::new()) }
+  static [cliart] Create([byte[]]$bytes, [string[]]$taglines) { return [cliart]::_init_($bytes, $taglines, [ref][cliart]::new()) }
+  static [cliart] Create([string]$string, [string[]]$taglines) { return [cliart]::_init_($string, $taglines, [ref][cliart]::new()) }
 
   static hidden [cliart] _init_([string]$s, $o) { $o.Value.cstr = $s; return $o.Value }
-  static hidden [cliart] _init_([string]$s, [string[]]$taglines, $o) { $o.Value.cstr = $s; $taglines.ForEach({ $o.Value.taglines.Add($_) }); return $o.Value }
-  static hidden [cliart] _init_([IO.FileInfo]$file, $o) {
-    return [cliart]::_init_([IO.File]::ReadAllBytes($file.FullName), $o)
+
+  static hidden [cliart] _init_([string]$s, [string[]]$taglines, $o) {
+    $use_verbose = (Get-Variable VerbosePreference -Scope global -ValueOnly) -eq 'Continue'
+    $i = switch ($true) {
+      ([xcrypt]::IsValidUrl($s)) { Get-Item (Start-DownloadWithRetry -Url $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
+      ([xcrypt]::IsBase64String($s)) { $s; break }
+      ([IO.Path]::IsPathFullyQualified($s)) { (Get-Item $s); break }
+      Default {
+        throw [ArgumentException]::new('Invalid input string. [cliart]::Create() requires a valid url, base64 string or path.')
+      }
+    }
+    $o.Value.cstr = [cliart]::_init_($i, $o).cstr;
+    if ([IO.File]::Exists($i)) { Remove-Item $i -Verbose:$false -Force -ea Ignore }
+    if ($taglines.Count -gt 0) { $taglines.ForEach({ [void]$o.Value.taglines.Add($_) }) }
+    return $o.Value
   }
-  static hidden [cliart] _init_([byte[]]$bytes, $o) {
-    $o.Value.cstr = [convert]::ToBase64String($bytes) | xconvert ToCompressed; return $o.Value
+  static hidden [cliart] _init_([IO.FileInfo]$file, $o) {
+    return [cliart]::_init_([IO.File]::ReadAllBytes($file.FullName), @(), $o)
+  }
+  static hidden [cliart] _init_([byte[]]$bytes, [string[]]$taglines, $o) {
+    $o.Value.cstr = [convert]::ToBase64String($bytes) | xconvert ToCompressed;
+    if ($taglines.Count -gt 0) { $taglines.ForEach({ [void]$o.Value.taglines.Add($_) }) }
+    return $o.Value
   }
   static [string] Print([string]$cstr) {
     return [System.Text.Encoding]::UTF8.GetString([convert]::FromBase64String(($cstr | xconvert FromCompressed)))
   }
-  hidden [string] GetPrinter() { return '[cliart]::Print("{0}")' -f $this.cstr }
-
-  [string] GetTagline() { return $this.taglines | Get-Random }
-  [string] ToString() {
-    return [cliart]::Print($this.cstr)
+  hidden [string] GetPrinter() {
+    return '[cliart]::Print("{0}")' -f $this.cstr
   }
+  [void] Write() {
+    $this.Write($true)
+  }
+  [void] Write([bool]$Animate) {
+    $this.Write(0, $true, $Animate)
+  }
+  [void] Write([string]$AdditionalText) {
+    $this.Write('LimeGreen', 0, $true, $AdditionalText, $true)
+  }
+  [void] Write([int]$SpaceBeforeTagline, [bool]$Nonewline, [bool]$Animate) {
+    $this.Write('LimeGreen', $SpaceBeforeTagline, $Nonewline, [string]::Empty, $Animate)
+  }
+  [void] Write([string]$asciicolor, [int]$SpaceBeforeTagline, [bool]$Nonewline, [string]$AdditionalText, [bool]$Animate) {
+    $this.Write($asciicolor, $SpaceBeforeTagline, $asciicolor, $Nonewline, $AdditionalText, $Animate)
+  }
+  [void] Write([string]$asciicolor, [int]$SpaceBeforeTagline, [string]$TaglineColor, [bool]$Nonewline, [string]$AdditionalText, [bool]$Animate) {
+    $this.ToString() | Write-Console -f $asciicolor; $last_line = '{0}{1}' -f $([string][char]32 * $SpaceBeforeTagline), $this.GetTagline()
+    $last_line | Write-Console -f $TaglineColor -NoNewLine:$Nonewline -Animate:$Animate
+    if (![string]::IsNullOrWhiteSpace($AdditionalText)) { $AdditionalText | Write-Console -f LightCyan -Animate:$Animate }
+  }
+  [string] GetTagline() { return $this.taglines | Get-Random }
+
+  [string] ToString() { return [cliart]::Print($this.cstr) }
 }
 
 #endregion console_art
@@ -1460,7 +1498,7 @@ class PsRunner {
 $typestoExport = @(
   [NetworkManager], [RGB], [color],
   [ProgressUtil], [StackTracer], [ShellConfig], [dotProfile],
-  [PsRunner], [PsRecord], [cli]
+  [PsRunner], [PsRecord], [cli], [cliart]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
 foreach ($Type in $typestoExport) {

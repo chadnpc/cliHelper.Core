@@ -101,12 +101,12 @@ function Start-DownloadWithRetry {
     $DownloadScript = {
       param([uri]$Uri, [string]$FilePath)
       try {
-        $file_name = $FilePath | Split-Path -Leaf
+        $vOutptTxt = $outfile_verbose_txt ? $outfile_verbose_txt : ($FilePath | Split-Path -Leaf)
         $webClient = [System.Net.WebClient]::new()
         # $webClient.Credentials = $login
         $task = $webClient.DownloadFileTaskAsync($Uri, $FilePath)
         Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -SourceIdentifier WebClient.DownloadProgressChanged | Out-Null
-        $verbose ? (Write-Console "  Attempting to download '$url_verbose_txt' to '$outfile_verbose_txt'..." -f SteelBlue) : $null
+        $verbose ? (Write-Console "  Attempting to download '$url_verbose_txt' to '$vOutptTxt'..." -f SteelBlue) : $null
         $dlEvent.PsObject.Properties.Add([PSScriptProperty]::new('Data', {
               $e = Get-Event -SourceIdentifier WebClient.DownloadProgressChanged -ea Ignore
               if ($e) {
@@ -120,7 +120,7 @@ function Start-DownloadWithRetry {
             $ReceivedData = $dlEvent.Data.BytesReceived
             $TotalToReceive = $dlEvent.Data.TotalBytesToReceive
             $TotalPercent = $dlEvent.Data.ProgressPercentage
-            if ($null -ne $ReceivedData) {
+            if ($null -ne $ReceivedData -and $verbose) {
               $dlEvent.size_str = "{0} / {1}" -f $($GetfileSize.Invoke($ReceivedData)), $($GetfileSize.Invoke($TotalToReceive))
               [ProgressUtil]::WriteProgressBar([int]$TotalPercent, "  Downloading : $($dlEvent.size_str)")
             }
@@ -128,10 +128,10 @@ function Start-DownloadWithRetry {
           [System.Threading.Thread]::Sleep(50)
         }
       } catch {
-        Write-Console "Error occurred: $_" -f Salmon
+        Write-Console $_.Exception.Message -f Salmon
         throw $_
       } finally {
-        [ProgressUtil]::WriteProgressBar(100, $true, "  Downloaded $($dlEvent.size_str)", $true)
+        $verbose ? ([ProgressUtil]::WriteProgressBar(100, $true, "  Downloaded $($dlEvent.size_str)", $true)) : $null
         if ([IO.File]::Exists($FilePath)) {
           $verbose ? (Write-Console "  OutPath: '$FilePath'" -f SteelBlue) : $null
         }

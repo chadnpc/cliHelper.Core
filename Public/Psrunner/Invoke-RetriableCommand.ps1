@@ -109,6 +109,7 @@ function Invoke-RetriableCommand {
     [Parameter(Mandatory = $false, Position = 7, ParameterSetName = '__AllParameterSets')]
     [System.Threading.CancellationToken]$CancellationToken = [System.Threading.CancellationToken]::None,
 
+    # The message to display in the verbose stream
     [Parameter(Mandatory = $false, Position = 8, ParameterSetName = '__AllParameterSets')]
     [Alias('msg')][ValidateNotNullOrWhiteSpace()]
     [string]$Message,
@@ -168,7 +169,7 @@ function Invoke-RetriableCommand {
 
   process {
     $Attempts = 1; $Results = [Results]::new()
-    if ($PsBoundParameters.ContainsKey("Message")) {
+    if ($PsBoundParameters.ContainsKey("Message") -and $verbose) {
       Write-Console "$fxn $Message" -f $cmdColors.Information
     }
     while (($Attempts -le $MaxAttempts) -and !$Results.IsSuccess) {
@@ -241,17 +242,19 @@ function Invoke-RetriableCommand {
   }
 
   end {
-    $e = @{
-      0 = @{
-        c = "Error"
-        m = "$Message Completed With Errors. Total time elapsed $($Results.ElapsedTime). Check the log file `$LogPath".Trim()
-      };
-      1 = @{
-        c = "Information"
-        m = "$Message Completed Successfully. Total time elapsed $($Results.ElapsedTime)".Trim()
-      }
-    }[[int]$Results.IsSuccess]
-    Write-Console "$fxn $($e.m)" -f $cmdColors.($e.c)
+    if ($verbose) {
+      $e = @{
+        0 = @{
+          c = "Error"
+          m = "$Message Completed With Errors. Total time elapsed $($Results.ElapsedTime). Check the log file `$LogPath".Trim()
+        };
+        1 = @{
+          c = "Information"
+          m = "$Message Completed Successfully. Total time elapsed $($Results.ElapsedTime)".Trim()
+        }
+      }[[int]$Results.IsSuccess]
+      Write-Console "$fxn $($e.m)" -f $cmdColors.($e.c)
+    }
     $ErrorActionPreference = $eap;
     return $Results
   }

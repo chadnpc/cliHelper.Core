@@ -81,6 +81,10 @@ function Write-Console {
     [Alias('nn')]
     [switch]$NoNewLine,
 
+    # Adds typewriter animation
+    [Alias('a')]
+    [switch]$Animate,
+
     # Write the Object to the pipeline
     [switch]$PassThru
   )
@@ -121,10 +125,11 @@ function Write-Console {
         $b = "$($escape)48;2;$($Background.Red);$($Background.Green);$($Background.Blue)m"
       }
     }
+    $str = $f + $b + $Text + $resetAttributes
     if (!$NoNewLine.IsPresent) {
-      [System.Console]::WriteLine(($f + $b + $Text + $resetAttributes))
+      $Animate ? $([void][cli]::write($str); [Console]::WriteLine()) : ([Console]::WriteLine($str))
     } else {
-      [System.Console]::Write(($f + $b + $Text + $resetAttributes))
+      $Animate ? $([void][cli]::write($str)) : ([Console]::Write($str))
     }
   }
   End {
