@@ -12,7 +12,7 @@
   #     For ([int]$i=0; $i -le 8192; $i++) { Write-ProgressBar -Completed $i -OutOf 8192 -Activity "Running TaskName:" -CurrentOperation "Working on object $i" }
   # .EXAMPLE
   #     # Using Percentage
-  #     For ([int]$i=0; $i -le 150; $i++) {Write-ProgressBar -CurrentOperation "Working on Position $i" -PercentComplete $i -ForegroundColor Green -BackgroundColor Black}
+  #     For ([int]$i=0; $i -le 150; $i++) {Write-ProgressBar -CurrentOperation "Working on Position $i" -percent $i}
   # .INPUTS
   #     [string]
   # .OUTPUTS
@@ -29,10 +29,13 @@
     [int]$PBLength,
 
     [Parameter(Mandatory = $false)]
+    [string]$CurrentOperation,
+
+    [Parameter(Mandatory = $false)]
     [switch]$update
   )
 
   end {
-    [ProgressUtil]::WriteProgressBar($percent, $update.IsPresent, $PBLength);
+    [ProgressUtil]::WriteProgressBar($percent, $update.IsPresent, $PBLength, $CurrentOperation);
   }
 }

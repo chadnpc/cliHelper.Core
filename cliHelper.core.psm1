@@ -748,7 +748,7 @@ class cli {
 # .DESCRIPTION
 #  A class to convert dot ascii arts to b64string & vice versa
 # .LINK
-#  https://lachlanarthur.github.io/Braille-ASCII-Art/
+#  https://getcliart.vercel.app
 # .EXAMPLE
 #  $art = [cliart]::Create((Get-Item ./ascii))
 # .EXAMPLE
@@ -796,6 +796,7 @@ class cliart {
     return $o.Value
   }
   static [string] Print([string]$cstr) {
+    if ([string]::IsNullOrWhiteSpace($cstr)) { return [string]::Empty }
     return [System.Text.Encoding]::UTF8.GetString([convert]::FromBase64String(($cstr | xconvert FromCompressed)))
   }
   hidden [string] GetPrinter() {
@@ -818,7 +819,7 @@ class cliart {
   }
   [void] Write([string]$asciicolor, [int]$SpaceBeforeTagline, [string]$TaglineColor, [bool]$Nonewline, [string]$AdditionalText, [bool]$Animate) {
     $this.ToString() | Write-Console -f $asciicolor; $last_line = '{0}{1}' -f $([string][char]32 * $SpaceBeforeTagline), $this.GetTagline()
-    $last_line | Write-Console -f $TaglineColor -NoNewLine:$Nonewline -Animate:$Animate
+    if (![string]::IsNullOrWhiteSpace($last_line)) { $last_line | Write-Console -f $TaglineColor -NoNewLine:$Nonewline -Animate:$Animate }
     if (![string]::IsNullOrWhiteSpace($AdditionalText)) { $AdditionalText | Write-Console -f LightCyan -Animate:$Animate }
   }
   [string] GetTagline() { return $this.taglines | Get-Random }
