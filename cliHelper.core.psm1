@@ -1007,7 +1007,17 @@ class NetworkManager {
     [ProgressUtil]::WriteProgressBar($i, "doing stuff")
   }
 .EXAMPLE
-  [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 })
+  [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 });
+.EXAMPLE
+  $j = [ProgressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3; $input | Out-String }, (Get-Process pwsh));
+  $j | Receive-Job
+
+  NPM(K)    PM(M)      WS(M)     CPU(s)      Id  SI ProcessName
+  ------    -----      -----     ------      --  -- -----------
+        0     0.00     559.55      94.22   53184 …84 pwsh
+        0     0.00     253.84       6.91   55195 …23 pwsh
+.EXAMPLE
+  Wait-Task -ScriptBlock { Start-Sleep -Seconds 3; $input | Out-String } -InputObject (Get-Process pwsh)
 #>
 class ProgressUtil {
   static hidden [string] $_block = '■';
@@ -1058,8 +1068,12 @@ class ProgressUtil {
     }
     Write-Console ("] {0,3:##0}%" -f $percent) -f SlateBlue -NoNewLine:(!$Completed)
   }
-  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$Job) {
-    return [ProgressUtil]::WaitJob($progressMsg, $(Start-Job -ScriptBlock $Job))
+  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb) {
+    return [ProgressUtil]::WaitJob($progressMsg, $sb, $null)
+  }
+  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb, [PsObject]$InputObject) {
+    $Job = ($null -ne $InputObject) ? (Start-ThreadJob -InputObject $InputObject -ScriptBlock $sb) : (Start-ThreadJob -ScriptBlock $sb)
+    return [ProgressUtil]::WaitJob($progressMsg, $Job)
   }
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [System.Management.Automation.Job]$Job) {
     [Console]::CursorVisible = $false;
@@ -1086,7 +1100,7 @@ class ProgressUtil {
       }
       Write-Host "Completed with errors.`n`t$errormessages" -ForegroundColor Red
     } else {
-      Write-Host "Done." -ForegroundColor Green
+      Write-Host "Done" -ForegroundColor Green
     }
     [Console]::CursorVisible = $true;
     return $Job
