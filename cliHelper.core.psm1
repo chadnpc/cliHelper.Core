@@ -1009,7 +1009,7 @@ class NetworkManager {
 .EXAMPLE
   [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 });
 .EXAMPLE
-  $j = [ProgressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3; $input | Out-String }, (Get-Process pwsh));
+  $j = [ProgressUtil]::WaitJob("waiting", { Param($ob) Start-Sleep -Seconds 3; return $ob }, (Get-Process pwsh));
   $j | Receive-Job
 
   NPM(K)    PM(M)      WS(M)     CPU(s)      Id  SI ProcessName
@@ -1018,6 +1018,13 @@ class NetworkManager {
         0     0.00     253.84       6.91   55195 …23 pwsh
 .EXAMPLE
   Wait-Task -ScriptBlock { Start-Sleep -Seconds 3; $input | Out-String } -InputObject (Get-Process pwsh)
+.EXAMPLE
+  $RequestParams = @{
+    Uri    = "placeholderuri"
+    Method = "Post"
+    Body   = "jsonbody"
+  }
+  $r = [progressUtil]::WaitJob($progressmsg, { $p = $input; Invoke-RestMethod @p }, $RequestParams)
 #>
 class ProgressUtil {
   static hidden [string] $_block = '■';
@@ -1071,10 +1078,6 @@ class ProgressUtil {
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb) {
     return [ProgressUtil]::WaitJob($progressMsg, $sb, $null)
   }
-  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb, [PsObject]$InputObject) {
-    $Job = ($null -ne $InputObject) ? (Start-ThreadJob -InputObject $InputObject -ScriptBlock $sb) : (Start-ThreadJob -ScriptBlock $sb)
-    return [ProgressUtil]::WaitJob($progressMsg, $Job)
-  }
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [System.Management.Automation.Job]$Job) {
     [Console]::CursorVisible = $false;
     [ProgressUtil]::frames = [ProgressUtil]::_twirl[0]
@@ -1104,6 +1107,10 @@ class ProgressUtil {
     }
     [Console]::CursorVisible = $true;
     return $Job
+  }
+  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb, [Object[]]$ArgumentList) {
+    $Job = ($null -ne $ArgumentList) ? (Start-ThreadJob -ScriptBlock $sb -ArgumentList $ArgumentList ) : (Start-ThreadJob -ScriptBlock $sb)
+    return [ProgressUtil]::WaitJob($progressMsg, $Job)
   }
 }
 

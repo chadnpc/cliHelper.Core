@@ -2,7 +2,7 @@
   #.DESCRIPTION
   #  Waits for a scriptblock or job to complete
   #.EXAMPLE
-  # Wait-Task "waiting" { Start-Sleep -Seconds 3; $input | Out-String } (Get-Process pwsh);
+  #  Wait-Task "Running" { Param($ob) Start-Sleep -Seconds 3; return $ob } (Get-Process pwsh);
   #.PARAMETER ProgressMsg
   #  Message to display while waiting
   #.PARAMETER ScriptBlock
@@ -29,16 +29,19 @@
     [Alias('j')][ValidateNotNullOrEmpty()]
     [System.Management.Automation.Job]$Job,
 
-    [Parameter(Mandatory = $false)]
-    [Alias('input')]
-    [PsObject]$InputObject
+    [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'ScriptBlock')]
+    [Object[]]$ArgumentList = $null
   )
   begin {
     $Result = $null
   }
   process {
-    $threadJob = [ProgressUtil]::WaitJob($ProgressMsg, $($PSCmdlet.ParameterSetName -eq 'Job' ? $Job : $ScriptBlock), $InputObject);
-    $Result = $threadJob | Receive-Job
+    if ($PSCmdlet.ParameterSetName -eq 'ScriptBlock') {
+      $thrJob = [ProgressUtil]::WaitJob($ProgressMsg, $ScriptBlock, $ArgumentList);
+    } else {
+      $thrJob = [ProgressUtil]::WaitJob($ProgressMsg, $Job);
+    }
+    $Result = $thrJob | Receive-Job
   }
   end {
     return $Result

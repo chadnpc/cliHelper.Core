@@ -5,7 +5,7 @@
 - 0.1. 7
 
 2. Minor Version Releases (New Features, Backwards-Compatible):
-- 0.2.0
+- 0.2.1
 - 0.3.0
 - 0.4.0
 
