@@ -148,14 +148,14 @@ function Invoke-RetriableCommand {
       Information = 'LawnGreen'
     }
     class Result {
-      [PSDataCollection[PsObject]]$Output = [PSDataCollection[PsObject]]::new()
+      [System.Management.Automation.PSDataCollection[PsObject]]$Output = [System.Management.Automation.PSDataCollection[PsObject]]::new()
       [bool]$IsSuccess = $false
-      [ErrorRecord]$ErrorRecord = $null
+      [System.Management.Automation.ErrorRecord]$ErrorRecord = $null
       hidden [double]$ET = 0 # ElapsedTime
     }
     class Results {
-      hidden [Collection[Result]]$Items = [Collection[Result]]::new()
-      hidden [ErrorRecord[]]$Errors = @()
+      hidden [System.Collections.ObjectModel.Collection[Result]]$Items = [System.Collections.ObjectModel.Collection[Result]]::new()
+      hidden [System.Management.Automation.ErrorRecord[]]$Errors = @()
       Results() {
         $this.PsObject.Properties.Add([PSScriptProperty]::new('ElapsedTime', { if ($this.Items.Count -gt 0) { return [double](($this.Items.ET | Measure-Object -Sum).Sum) }; return [double]0 }))
         $this.PsObject.Properties.Add([PSScriptProperty]::new('IsSuccess', { $r = [bool]($this.Items.Count -gt 0 -and $this.Items.Where({ $_.IsSuccess }).Count -gt 0); $this.Errors = $this.Items.ErrorRecord; return $r }))

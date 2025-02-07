@@ -1105,6 +1105,29 @@ class NetworkManager {
   }
 }
 
+class AsyncHandle {
+  [Object]$AsyncState
+  [WaitHandle]$AsyncWaitHandle
+  [bool]$CompletedSynchronously
+  [bool]$IsCompleted
+  hidden $value
+  AsyncHandle() {}
+  AsyncHandle($object) {
+    $object.PsObject.Properties.Foreach({ $this.($_.Name) = $o.($_.Name) })
+    $this.value = $object
+  }
+}
+
+class AsyncResult {
+  [PowerShell] $Instance
+  [AsyncHandle] $Handle
+  AsyncResult($object) {
+    # $object is expected to be of type System.Management.Automation.PowerShellAsyncResult
+    $this.Instance = $object.Instance
+    $this.Handle = $object.AsyncHandle
+  }
+}
+
 
 <#
 .SYNOPSIS
@@ -1267,16 +1290,18 @@ class StackTracer {
   Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action ([PsRunner]::GetOnRemovalScript())
 
  .EXAMPLE
-  $r = [PsRunner]::new();
-  $worker1 = { $res = "worker running on thread $([Threading.Thread]::CurrentThread.ManagedThreadId)"; Start-Sleep -Seconds 5; return $res };
-  $worker2 = { return (Get-Variable PsRunner_* -ValueOnly) };
-  $worker3 = { $res = "worker running on thread $([Threading.Thread]::CurrentThread.ManagedThreadId)"; 10..20 | Get-Random | ForEach-Object {  Start-Sleep -Milliseconds ($_ * 100) }; return $res };
-  $r.Add_BGWorker($worker1); $r.Add_BGWorker($worker2); $r.Add_BGWorker($worker3);
-  $r.Run()
+  $jobs = (
+    { $res = "worker running on thread $([Threading.Thread]::CurrentThread.ManagedThreadId)"; Start-Sleep -Seconds 5; return $res },
+    { return (Get-Variable PsRunner_* -ValueOnly) },
+    { $res = "worker running on thread $([Threading.Thread]::CurrentThread.ManagedThreadId)"; 10..20 | Get-Random | ForEach-Object {  Start-Sleep -Milliseconds ($_ * 100) }; return $res }
+  )
+  # sync:
+  # $res = [PsRunner]::Run($jobs)
 
- .EXAMPLE
-  $ps = $r.RunAsync()
-  $or = $ps.Instance.EndInvoke($ps.AsyncHandle)
+  # Async:
+  $handle = [PsRunner]::RunAsync($jobs);
+  # do other stuff that you want
+  $result = [PsRunner]::EndInvoke()
 
  .EXAMPLE
   $ps = [powershell]::Create([PsRunner]::CreateRunspace())
@@ -1290,10 +1315,12 @@ class StackTracer {
  $h = $ps.BeginInvoke()
  $ps.EndInvoke($h)
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '')]
 class PsRunner {
   hidden [int] $_MinThreads = 2
   hidden [int] $_MaxThreads = [PsRunner]::GetThreadCount()
-  static hidden [string] $SyncId = { [void][PsRunner]::SetSyncHash(); return [PsRunner].SyncId }.Invoke() # Unique ID for each runner instance
+  static [AsyncResult] $AsyncResult = @()
+  static [string] $SyncId = { [void][PsRunner]::SetSyncHash(); return [PsRunner].SyncId }.Invoke() # Unique ID for each runner instance
 
   static PsRunner() {
     # set properties (Once-time)
@@ -1307,7 +1334,7 @@ class PsRunner {
       $this._MaxThreads = $value
     } -Force;
     [PsRunner].PsObject.Properties.Add([PSScriptProperty]::new('Instance', {
-          if (![PsRunner]::GetSyncHash()["Instance"]) { [PsRunner].SyncHash["Instance"] = [PsRunner]::Get_runspace_manager() };
+          if (![PsRunner]::GetSyncHash()["Instance"]) { [PsRunner].SyncHash["Instance"] = [PsRunner]::Create_runspace_manager() };
           return [PsRunner].SyncHash["Instance"]
         }, {
           throw [SetValueException]::new('Instance is read-only')
@@ -1315,51 +1342,65 @@ class PsRunner {
       )
     )
     "PsRunner" | Update-TypeData -MemberName GetOutput -MemberType ScriptMethod -Value {
-      $o = [PsRunner]::GetSyncHash()["Output"]; [PsRunner].SyncHash["Output"] = [PSDataCollection[PsObject]]::new()
+      $o = [PsRunner]::GetSyncHash()["Output"]; [PsRunner].SyncHash["Output"] = [System.Management.Automation.PSDataCollection[PsObject]]::new()
       [PsRunner].SyncHash["Runspaces"] = [ConcurrentDictionary[int, powershell]]::new()
       return $o
     } -Force;
   }
-  [void] Add_BGWorker([ScriptBlock]$Worker) {
-    $this.Add_BGWorker([PsRunner]::GetWorkerId(), $Worker, @())
+  static [PSDataCollection[PsObject]] Run() {
+    $o = [PsRunner]::Run([PsRunner]::GetSyncHash()["Runspaces"]);
+    [PsRunner].SyncHash["Output"] += $o;
+    return $o
   }
-  [void] Add_BGWorker([int]$Id, [ScriptBlock]$Worker, [object[]]$Arguments) {
-    [void][PsRunner]::Isvalid_NewRunspaceId($Id)
-    $ps = [powershell]::Create([PsRunner]::CreateRunspace())
-    $ps = $ps.AddScript($Worker)
-    if ($Arguments.Count -gt 0) { $Arguments.ForEach({ [void]$ps.AddArgument($_) }) }
-    # $ps.RunspacePool = [PsRunner].SyncHash["RunspacePool"] # https://github.com/PowerShell/PowerShell/issues/18934
-    # Save each Worker in a dictionary, ie: {Int_Id, Powershell_instance_on_different_thread}
-    if (![PsRunner]::GetSyncHash()["Runspaces"].TryAdd($Id, $ps)) { throw [System.InvalidOperationException]::new("worker $Id already exists.") }
-    [PsRunner].SyncHash["Jobs"][$Id] = @{
-      __PS   = ([ref]$ps).Value
-      Status = ([ref]$ps).Value.Runspace.RunspaceStateInfo.State
-      Result = $null
+  static [PSDataCollection[PsObject]] Run([scriptblock[]]$Jobs) {
+    if ([PsRunner]::HasPendingJobs()) {
+      throw 'PsRunner has pending Jobs; run them or run [PsRunner]::CleanUp()'
     }
+    [PsRunner]::CleanUp(); $Jobs.ForEach({ [PsRunner]::Add_BGWorker($_) })
+    $o = [PsRunner]::Run([PsRunner]::GetSyncHash()["Runspaces"]); [PsRunner].SyncHash["Output"] += $o; return $o
   }
-  [PsObject[]] Run() { $o = [PsRunner]::Run([PsRunner]::GetSyncHash()["Runspaces"]); [PsRunner].SyncHash["Output"] += $o; return $o }
-  static [PsObject[]] Run([ConcurrentDictionary[int, powershell]]$Runspaces) {
-    if (![PsRunner]::HasPendingJobs()) { return $null }
+  static [PSDataCollection[PsObject]] Run([ConcurrentDictionary[int, powershell]]$Runspaces) {
+    if (![PsRunner]::HasPendingJobs()) {
+      Write-Warning "There are no pending jobs. Please run GetOutput(); and Add_BGWorker(); then try again."
+      return $null
+    }
     [PsRunner].SyncHash["Runspaces"] = $Runspaces
-    $Handle = [PsRunner].Instance.BeginInvoke()
-    Write-Host ">>> Started background jobs" -f Green
-    $i = 0
+    $i = 0; $Handle = [PsRunner].Instance.BeginInvoke()
     while ($Handle.IsCompleted -eq $false) {
       Start-Sleep -Milliseconds 500
       Write-Progress -Activity "Running" -Status "In Progress" -PercentComplete $($i % 100)
       $i += 5
     }
-    Write-Host "`n>>> All background jobs are complete." -f Green
     return [PsRunner].Instance.EndInvoke($Handle)
   }
-  [PsObject] RunAsync() { return [PsRunner]::RunAsync([PsRunner]::GetSyncHash()["Runspaces"]) }
-  static [PsObject] RunAsync([ConcurrentDictionary[int, powershell]]$Runspaces) {
-    if (![PsRunner]::HasPendingJobs()) { return $null }
-    [PsRunner]::GetSyncHash()["Runspaces"] = $Runspaces
-    return [PSCustomObject]@{
-      Instance    = [PsRunner].Instance
-      AsyncHandle = [IAsyncResult][PsRunner].Instance.BeginInvoke()
+  static [AsyncResult] RunAsync() {
+    return [PsRunner]::RunAsync([PsRunner]::GetSyncHash()["Runspaces"])
+  }
+  static [AsyncResult] RunAsync([scriptblock[]]$Jobs) {
+    if ([PsRunner]::HasPendingJobs()) {
+      throw 'PsRunner has pending Jobs; run them or run [PsRunner]::CleanUp()'
     }
+    [PsRunner]::CleanUp(); $Jobs.ForEach({ [PsRunner]::Add_BGWorker($_) })
+    return [PsRunner]::RunAsync([PsRunner]::GetSyncHash()["Runspaces"])
+  }
+  static [AsyncResult] RunAsync([ConcurrentDictionary[int, powershell]]$Runspaces) {
+    if (![PsRunner]::HasPendingJobs()) {
+      Write-Warning "There are no pending jobs. Please run GetOutput(); and Add_BGWorker(); then try again.";
+      return $null
+    }
+    [PsRunner]::GetSyncHash()["Runspaces"] = $Runspaces
+    [PsRunner]::AsyncResult.Handle = [IAsyncResult][PsRunner].Instance.BeginInvoke()
+    [PsRunner]::AsyncResult.Instance = [PsRunner].Instance
+    return [PsRunner]::AsyncResult
+  }
+  static [PSDataCollection[PsObject]] EndInvoke() {
+    if (![PsRunner]::AsyncResult) {
+      throw "No AsyncResult result found"
+    }
+    if ($null -eq [PsRunner]::AsyncResult.Instance) {
+      throw 'No Async instance found! ::RunAsync($Jobs) and try again.'
+    }
+    return [PsRunner].Instance.EndInvoke([PsRunner]::AsyncResult.Handle.value)
   }
   static [Runspace] CreateRunspace() {
     $defaultvars = @(
@@ -1416,6 +1457,23 @@ class PsRunner {
     if (!$v -and $ThrowOnFail) {
       throw [System.InvalidOperationException]::new("Runspace with ID $RsId already exists.")
     }; return $v
+  }
+  static [void] Add_BGWorker([ScriptBlock]$Worker) {
+    [PsRunner]::Add_BGWorker([PsRunner]::GetWorkerId(), $Worker, @())
+  }
+  static [void] Add_BGWorker([int]$Id, [ScriptBlock]$Worker, [object[]]$Arguments) {
+    [void][PsRunner]::Isvalid_NewRunspaceId($Id)
+    $ps = [powershell]::Create([PsRunner]::CreateRunspace())
+    $ps = $ps.AddScript($Worker)
+    if ($Arguments.Count -gt 0) { $Arguments.ForEach({ [void]$ps.AddArgument($_) }) }
+    # $ps.RunspacePool = [PsRunner].SyncHash["RunspacePool"] # https://github.com/PowerShell/PowerShell/issues/18934
+    # Save each Worker in a dictionary, ie: {Int_Id, Powershell_instance_on_different_thread}
+    if (![PsRunner]::GetSyncHash()["Runspaces"].TryAdd($Id, $ps)) { throw [System.InvalidOperationException]::new("worker $Id already exists.") }
+    [PsRunner].SyncHash["Jobs"][$Id] = @{
+      __PS   = ([ref]$ps).Value
+      Status = ([ref]$ps).Value.Runspace.RunspaceStateInfo.State
+      Result = $null
+    }
   }
   static [PSVariable[]] GetVariables() {
     # Set Environment Variables
@@ -1541,8 +1599,7 @@ class PsRunner {
     }
     return [PsRunner].SyncHash
   }
-  static [PowerShell] Get_runspace_manager() {
-    Write-Verbose "Creating Runspace Manager (OneTime) ..."
+  static [PowerShell] Create_runspace_manager() {
     $i = [powershell]::Create([PsRunner]::CreateRunspace())
     $i.AddScript({
         $Runspaces = $SyncHash["Runspaces"]
@@ -1607,9 +1664,17 @@ class PsRunner {
     return (Get-Variable -Name $([PsRunner]::SyncId) -ValueOnly -Scope Global)
   }
   static [bool] HasPendingJobs() {
-    $hpj = [PsRunner]::GetSyncHash()["Jobs"].Values.Keys.Contains("__PS")
-    if (!$hpj) { Write-Warning "There are no pending jobs. Please run GetOutput(); and Add_BGWorker(); then try again." }
-    return $hpj
+    $j = [PsRunner]::GetSyncHash()["Jobs"]
+    return (($j.count -gt 0) ? $j.Values.Keys.Contains("__PS") : $false)
+  }
+  static [void] CleanUp() {
+    [PsRunner].SyncHash.Jobs.Clear()
+    # [PsRunner].SyncHash["Instance"] = [PsRunner]::Create_runspace_manager()
+    $rs = [PsRunner]::GetSyncHash()["Runspaces"]
+    [PsRunner].SyncHash.Runspaces = [ConcurrentDictionary[int, powershell]]::new();
+    $rs.keys.Where({ $rs[$_].InvocationStateInfo.State -ne "Completed" }).Foreach({ [PsRunner].SyncHash.Runspaces[$_] = $rs[$_] })
+    if ([PsRunner].SyncHash.Results) { [PsRunner].SyncHash.Results = @() }
+    if ([PsRunner].SyncHash.Output) { [PsRunner].SyncHash.Output = [PSDataCollection[PsObject]]::new() }
   }
   static [int] GetWorkerId() {
     $Id = 0; do {
