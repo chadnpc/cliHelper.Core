@@ -14,8 +14,9 @@
   #   the prompt in its own window. If not provided, the Message is used.
   # .EXAMPLE
   #   Confirm-Choice "Are you sure?"
-  [OutputType([Boolean])]
   [CmdletBinding()]
+  [OutputType([Boolean])]
+  [Reflection.AssemblyMetadata("title", "Confirm-Choice")]
   param (
     [Parameter(Position = 0, Mandatory = $true)]
     [string]$Message,

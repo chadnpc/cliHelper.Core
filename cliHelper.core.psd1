@@ -51,6 +51,7 @@
   TypesToProcess        = @()
   FormatsToProcess      = @()
   RequiredModules       = @(
+    'spectre.ansiconsole'
     'cliHelper.xconvert'
     'cliHelper.xcrypt'
     # Twilio

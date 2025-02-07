@@ -11,6 +11,7 @@ function Write-MOTD {
 		https://github.com/alainQtec/devHelper/blob/main/Private/devHelper.Cli/Public/Write-MOTD.ps1
 	#>
   [CmdletBinding()]
+  [Reflection.AssemblyMetadata("title", "Write-MOTD")]
   [OutputType([System.string])]
   param (
   )

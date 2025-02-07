@@ -1,7 +1,7 @@
 function Write-Border {
   [CmdletBinding(DefaultParameterSetName = "single")]
+  [Reflection.AssemblyMetadata("title", "Write-Border")]
   [OutputType([System.String])]
-
   Param(
     # The string of text to process
     [Parameter(Position = 0, Mandatory, ValueFromPipeline, ParameterSetName = 'single')]

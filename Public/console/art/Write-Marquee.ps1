@@ -8,6 +8,7 @@ function Write-Marquee {
   # .EXAMPLE
   #   PS> Write-Marquee "Hello_World"
   [CmdletBinding()]
+  [Reflection.AssemblyMetadata("title", "Write-Marquee")]
   param (
     [string]$text = "PowerShell is powerful! PowerShell is cross-platform! PowerShell is open-source! PowerShell is easy to learn! Powershell is fully documented",
     [int]$Count = 12,

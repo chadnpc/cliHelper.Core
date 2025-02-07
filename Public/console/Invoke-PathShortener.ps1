@@ -1,5 +1,6 @@
 function Invoke-PathShortener {
   [CmdletBinding()]
+  [Reflection.AssemblyMetadata("title", "Invoke-PathShortener")]
   [Alias("GetShortPath")]
   param (
     # Path to shorten.
@@ -26,6 +27,7 @@ function Invoke-PathShortener {
     [Parameter()]
     [string]$TruncateChar = [char]8230
   )
+
   process {
     if (![xcrypt]::IsValidUrl($Path)) {
       $Path = [xcrypt]::GetUnResolvedPath($Path)

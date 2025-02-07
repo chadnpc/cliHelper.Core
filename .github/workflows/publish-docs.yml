@@ -1,0 +1,38 @@
+name: Publish Doc Site
+
+on:
+  push:
+    branches:
+     - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    environment: prod
+    if: github.repository_owner == 'ShaunLawrie'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build Docs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $docsProjectRoot = "./PwshSpectreConsole.Docs"
+          npm ci --prefix $docsProjectRoot
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install npm dependencies"
+          }
+          npm run build --prefix $docsProjectRoot
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to run npm build"
+          }
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: "./PwshSpectreConsole.Docs/dist"
+          command: pages deploy . --project-name pwshspectreconsole --commit-dirty=true --branch=main

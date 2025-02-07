@@ -20,7 +20,6 @@ using namespace System.Management.Automation.Runspaces
 #Requires -Modules cliHelper.xconvert, cliHelper.xcrypt
 #Requires -Psedition Core
 
-
 #region    Config_classes
 class PsRecord {
   hidden [uri] $Remote # usually a gist uri
@@ -388,6 +387,114 @@ class Color : System.ValueType {
   static [rgb] $Wheat = [rgb]::new(245, 222, 179)
   static [rgb] $WhiteSmoke = [rgb]::new(245, 245, 245)
   static [rgb] $YellowGreen = [rgb]::new(154, 205, 50)
+
+  static [tuple[int, int, int]] ToHsv([rgb]$RGB) {
+    return [Color]::ToHsv($RGB.Red, $RGB.Green, $RGB.Blue)
+  }
+  static [tuple[int, int, int]] ToHsv([int]$Red, [int]$Green, [int]$Blue) {
+    $redPercent = $Red / 255.0
+    $greenPercent = $Green / 255.0
+    $bluePercent = $Blue / 255.0
+
+    $max = [Math]::Max([Math]::Max($redPercent, $greenPercent), $bluePercent)
+    $min = [Math]::Min([Math]::Min($redPercent, $greenPercent), $bluePercent)
+    $delta = $max - $min
+
+    $saturation = 0
+    $value = 0
+    $hue = 0
+
+    if ($delta -eq 0) {
+      $hue = 0
+    } elseif ($max -eq $redPercent) {
+      $hue = 60 * ((($greenPercent - $bluePercent) / $delta) % 6)
+    } elseif ($max -eq $greenPercent) {
+      $hue = 60 * ((($bluePercent - $redPercent) / $delta) + 2)
+    } elseif ($max -eq $bluePercent) {
+      $hue = 60 * ((($redPercent - $greenPercent) / $delta) + 4)
+    }
+    if ($hue -lt 0) { $hue = 360 + $hue }
+
+    if ($max -eq 0) {
+      $saturation = 0
+    } else {
+      $saturation = $delta / $max * 100
+    }
+    $value = $max * 100
+
+    return [tuple]::Create([int]$hue, [int]$saturation, [int]$value)
+  }
+  static [RGB] FromHsl([int]$Hue, [int]$Saturation, [int]$Lightness) {
+    $huePercent = $Hue / 360.0
+    $saturationPercent = $Saturation / 100.0
+    $lightnessPercent = $Lightness / 100.0
+    ($r, $g, $b) = if ($saturationPercent -eq 0) {
+      $lightnessPercent,
+      $lightnessPercent,
+      $lightnessPercent
+    } else {
+      $q = ($lightnessPercent -lt 0.5) ? ($lightnessPercent * (1 + $saturationPercent)) : ($lightnessPercent + $saturationPercent - ($lightnessPercent * $saturationPercent))
+      $p = 2 * $lightnessPercent - $q
+
+      [Color]::FromPQT($p, $q, ($huePercent + (1 / 3))),
+      [Color]::FromPQT($p, $q, $huePercent),
+      [Color]::FromPQT($p, $q, ($huePercent - (1 / 3)))
+    }
+    return [RGB]::new([int]($r * 255), [int]($g * 255), [int]($b * 255))
+  }
+  static [int] FromPQT([double]$P, [double]$Q, [double]$T) {
+    if ($T -lt 0) { $T += 1 }
+    if ($T -gt 1) { $T -= 1 }
+
+    if ($T -lt (1 / 6)) { return $P + ($Q - $P) * 6 * $T }
+
+    if ($T -lt (1 / 2)) { return $Q }
+    if ($T -lt (2 / 3)) { return $P + ($Q - $P) * (2 / 3 - $T) * 6 }
+
+    return $P
+  }
+  static [int] GetLightness([int]$Red, [int]$Green, [int]$Blue) {
+    $redPercent = $Red / 255.0
+    $greenPercent = $Green / 255.0
+    $bluePercent = $Blue / 255.0
+    $max = [Math]::Max([Math]::Max($redPercent, $greenPercent), $bluePercent)
+    $min = [Math]::Min([Math]::Min($redPercent, $greenPercent), $bluePercent)
+
+    return ($max + $min) / 2
+  }
+  static [string] GetCategory([int]$Hue, [int]$Saturation, [int]$Value) {
+    $categories = @{
+      "02 Red"    = @(0..20 + 350..360)
+      "03 Orange" = @(21..45)
+      "04 Yellow" = @(46..60)
+      "05 Green"  = @(61..108)
+      "06 Green2" = @(109..150)
+      "07 Cyan"   = @(151..190)
+      "08 Blue"   = @(191..220)
+      "09 Blue2"  = @(221..240)
+      "10 Purple" = @(241..280)
+      "11 Pink1"  = @(281..300)
+      "12 Pink"   = @(301..350)
+    }
+
+    if ($Saturation -lt 15) {
+      if ($Value -lt 40) {
+        return "00 Grey"
+      }
+      return "00 GreyZMud"
+    }
+    $res = @()
+    foreach ($category in $categories.GetEnumerator()) {
+      if ($Hue -in $category.Value) {
+        $cat = $category.Key
+        if ($Saturation -lt 2) {
+          $cat = $cat + "ZMud"
+        }
+        $res += $cat
+      }
+    }
+    return $res
+  }
 }
 
 # .SYNOPSIS
@@ -660,13 +767,10 @@ class dotProfile {
 
 #endregion Config_classes
 
-#region    console_art
 # .SYNOPSIS
 #   A console writeline helper
-# .EXAMPLE
-#   Write-AnimatedHost "Hello world" -f magenta
 class cli {
-  static hidden [ValidateNotNull()][string]$Preffix # .EXAMPLE Try this: # [cli]::Preffix = '@:'; [void][cli]::Write('animations and stuff', [ConsoleColor]::Magenta)
+  static hidden [ValidateNotNull()][string]$Preffix # .EXAMPLE Try this: # [AnsiConsole]::Preffix = '@:'; [void][cli]::Write('animations and stuff', [ConsoleColor]::Magenta)
   static hidden [ValidateNotNull()][scriptblock]$textValidator # ex: if $text does not match a regex throw 'erro~ ..'
   static [string] write([string]$text) {
     return [cli]::Write($text, 20, 1200)
@@ -743,6 +847,7 @@ class cli {
   }
 }
 
+#region    console_art
 # .SYNOPSIS
 #  cliart helper.
 # .DESCRIPTION
@@ -775,7 +880,7 @@ class cliart {
   static hidden [cliart] _init_([string]$s, [string[]]$taglines, $o) {
     $use_verbose = (Get-Variable VerbosePreference -Scope global -ValueOnly) -eq 'Continue'
     $i = switch ($true) {
-      ([xcrypt]::IsValidUrl($s)) { Get-Item (Start-DownloadWithRetry -Url $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
+      ([xcrypt]::IsValidUrl($s)) { Get-Item (Start-DownloadWithRetry -Uri $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
       ([xcrypt]::IsBase64String($s)) { $s; break }
       ([IO.Path]::IsPathFullyQualified($s)) { (Get-Item $s); break }
       Default {
@@ -828,7 +933,6 @@ class cliart {
 }
 
 #endregion console_art
-
 class NetworkManager {
   [string] $HostName
   static [System.Net.IPAddress[]] $IPAddresses

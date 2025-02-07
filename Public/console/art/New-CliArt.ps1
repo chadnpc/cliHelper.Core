@@ -19,6 +19,7 @@
     Requires -Modules cliHelper.core
   #>
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "")]
+  [Reflection.AssemblyMetadata("title", "New-CliArt")]
   [CmdletBinding(DefaultParameterSetName = 'FilePath')]
   [OutputType([CliArt])][Alias('Create-CliArt')]
   param (
