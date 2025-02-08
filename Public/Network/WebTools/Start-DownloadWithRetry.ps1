@@ -125,8 +125,8 @@ function Start-DownloadWithRetry {
       param([uri]$Uri, [string]$OutFile, $dlEvent, [bool]$verbose)
       try {
         $webClient = [System.Net.WebClient]::new()
-        $vOutptTxt = $OutFile | Invoke-PathShortener
-        $Uri_verbose_txt = $Uri.AbsolutePath | Invoke-PathShortener
+        $vOutptTxt = $OutFile | Get-ShortPath
+        $Uri_verbose_txt = $Uri.AbsolutePath | Get-ShortPath
         # $webClient.Credentials = $login
         $task = $webClient.DownloadFileTaskAsync($Uri, $OutFile)
         Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -SourceIdentifier $dlEvent.Id | Out-Null

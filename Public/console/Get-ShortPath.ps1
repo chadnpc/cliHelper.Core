@@ -1,7 +1,17 @@
-function Invoke-PathShortener {
-  [CmdletBinding()]
-  [Reflection.AssemblyMetadata("title", "Invoke-PathShortener")]
-  [Alias("GetShortPath")]
+function Get-ShortPath {
+  <#
+  .SYNOPSIS
+    A short one-line action-based description, e.g. 'Tests if a function is valid'
+  .DESCRIPTION
+    A longer description of the function, its purpose, common use cases, etc.
+  .LINK
+    https://github.com/alainQtec/cliHelper.Core/blob/main/Public/console/Get-ShortPath.ps1
+  .EXAMPLE
+    pwd | gsp
+  #>
+  [CmdletBinding()][OutputType([string])]
+  [Reflection.AssemblyMetadata("title", "Get-ShortPath")]
+  [Alias("gsp", "Invoke-PathShortener")]
   param (
     # Path to shorten.
     [Parameter(Position = 0, Mandatory = $false , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]

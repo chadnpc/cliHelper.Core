@@ -112,7 +112,7 @@ function Show-Tree {
       $propStr
     }
     function ShowItem {
-      [CmdletBinding()]
+      [CmdletBinding()][OutputType([string])]
       Param(
         [string]$Path,
         [string]$Name,

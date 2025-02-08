@@ -20,6 +20,117 @@ using namespace System.Management.Automation.Runspaces
 #Requires -Modules cliHelper.xconvert, cliHelper.xcrypt
 #Requires -Psedition Core
 
+
+class InstallException : Exception {
+  InstallException() {}
+  InstallException([string]$message) : base($message) {}
+  InstallException([string]$message, [Exception]$innerException) : base($message, $innerException) {}
+}
+
+class InstallFailedException : InstallException {
+  InstallFailedException() {}
+  InstallFailedException([string]$message) : base($message) {}
+  InstallFailedException([string]$message, [Exception]$innerException) : base($message, $innerException) {}
+}
+
+class Requirement {
+  [string] $Name
+  [version] $Version
+  [string] $Description
+  [string] $InstallScript
+
+  Requirement() {}
+  Requirement([array]$arr) {
+    $this.Name = $arr[0]
+    $this.Version = $arr.Where({ $_ -is [version] })[0]
+    $this.Description = $arr.Where({ $_ -is [string] -and $_ -ne $this.Name })[0]
+    $__sc = $arr.Where({ $_ -is [scriptblock] })[0]
+    $this.InstallScript = ($null -ne $__sc) ? $__sc.ToString() : $arr[-1]
+  }
+  Requirement([string]$Name, [scriptblock]$InstallScript) {
+    $this.Name = $Name
+    $this.InstallScript = $InstallScript.ToString()
+  }
+  Requirement([string]$Name, [string]$Description, [scriptblock]$InstallScript) {
+    $this.Name = $Name
+    $this.Description = $Description
+    $this.InstallScript = $InstallScript.ToString()
+  }
+
+  [bool] IsInstalled() {
+    try {
+      Get-Command $this.Name -Type Application
+      return $?
+    } catch [CommandNotFoundException] {
+      return $false
+    } catch {
+      throw [InstallException]::new("Failed to check if $($this.Name) is installed", $_.Exception)
+    }
+  }
+  [bool] Resolve() {
+    return $this.Resolve($false, $false)
+  }
+  [bool] Resolve([switch]$Force, [switch]$What_If) {
+    $is_resolved = $true
+    if (!$this.IsInstalled() -or $Force.IsPresent) {
+      Write-Console "[Resolve requrement] $($this.Name) " -f Green -NoNewLine
+      if ($this.Description) {
+        Write-Console "($($this.Description)) " -f BlueViolet -NoNewLine
+      }
+      Write-Console "$($this.Version) " -f Green
+      if ($What_If.IsPresent) {
+        Write-Console "Would install: $($this.Name)" -f Yellow
+      } else {
+        [ScriptBlock]::Create("$($this.InstallScript)").Invoke()
+      }
+      $is_resolved = $?
+    }
+    return $is_resolved
+  }
+}
+
+Class InstallRequirements {
+  [Requirement[]] $list = @()
+  [bool] $resolved = $false
+  [string] $jsonPath = [IO.Path]::Combine($(Resolve-Path .).Path, 'requirements.json')
+
+  InstallRequirements() {}
+  InstallRequirements([array]$list) { $this.list = $list }
+  InstallRequirements([List[array]]$list) { $this.list = $list.ToArray() }
+  InstallRequirements([hashtable]$Map) { $Map.Keys | ForEach-Object { $Map[$_] ? ($this.$_ = $Map[$_]) : $null } }
+  InstallRequirements([Requirement]$req) { $this.list += $req }
+  InstallRequirements([Requirement[]]$list) { $this.list += $list }
+
+  [void] Resolve() {
+    $this.Resolve($false, $false)
+  }
+  [void] Resolve([switch]$Force, [switch]$What_If) {
+    $res = $true; $this.list.ForEach({ $res = $res -and $_.Resolve($Force, $What_If) })
+    $this.resolved = $res
+  }
+  [void] Import() {
+    $this.Import($this.JsonPath, $false)
+  }
+  [void] Import([switch]$throwOnFail) {
+    $this.Import($this.JsonPath, $throwOnFail)
+  }
+  [void] Import([string]$JsonPath, [switch]$throwOnFail) {
+    if ([IO.File]::Exists($JsonPath)) { $this.list = Get-Content $JsonPath | ConvertFrom-Json }; return
+    if ($throwOnFail) {
+      throw [FileNotFoundException]::new("Requirement json file not found: $JsonPath")
+    }
+  }
+  [void] Export() {
+    $this.Export($this.JsonPath)
+  }
+  [void] Export([string]$JsonPath) {
+    $this.list | ConvertTo-Json -Depth 1 -Verbose:$false | Out-File $JsonPath
+  }
+  [string] ToString() {
+    return $this | ConvertTo-Json
+  }
+}
+
 #region    Config_classes
 class PsRecord {
   hidden [uri] $Remote # usually a gist uri
@@ -513,15 +624,11 @@ class ShellConfig : PsRecord {
   [bool]$BluetoothTaskbarIconEnabled #Specifies whether to enable the Bluetooth taskbar icon.
   [string]$ComputerName #Specifies the name of the computer.
   [bool]$ConvertibleSlateModePromptPreference # Configure to support prompts triggered by changes to ConvertibleSlateMode. OEMs must make sure that ConvertibleSlateMode is always accurate for their devices.
-  [dotProfile]$dotProfile = $( { ConvertFrom-Json '
-        {
-            "path": "PathTo\\Microsoft.PowerShell_profile.ps1",
-            "autoUpdate": true,
-            "autoLoad": true,
-            "ExecutionPolicy": "RemoteSigned",
-            "CopyProfile": true
-        }
-    '}.Invoke())
+  [string]$path = [IO.Path]::Combine([Environment]::GetFolderPath('MyDocuments'), 'WindowsPowershell', 'Microsoft.PowerShell_profile.ps1')
+  [bool]$AutoUpdate = $true
+  [bool]$AutoLoad = $true
+  [Microsoft.PowerShell.ExecutionPolicy]$ExecutionPolicy = "RemoteSigned"
+  [bool]$CopyProfile = $true
   [bool]$DisableAutoDaylightTimeSet #Specifies whether to enable the destination computer to automatically change between daylight saving time and standard time.
   [array]$Display # Specifies display settings to apply to a destination computer.
   [string[]]$FirstLogonCommands #Specifies commands to run the first time that an end user logs on to the computer. This setting is not supported in Windows 10 in S mode.
@@ -565,25 +672,21 @@ class ShellConfig : PsRecord {
   }
 }
 class dotProfile {
-  [string]$path = [IO.Path]::Combine([Environment]::GetFolderPath('MyDocuments'), 'WindowsPowershell', 'Microsoft.PowerShell_profile.ps1')
-  [Microsoft.PowerShell.ExecutionPolicy]$ExecutionPolicy
-  [cliart]$Banner = [cliart]::Create("H4sIAAAAAAAAA22SQQ+CMAyFf5AHTVwiV2UHCVFMDOyMiS4kHHA4iP/edmW2EA4v27r27XsE1ZmP6u4nlvEq1IzP0qMNKvLKPfPSsirnQ61y1jVtdmvaeg/rGdYDnYMuMK/prlboU9rN3ws96AzqC+EFc8CiWZKR+fhMfZM/eUa+OTPv41sPPXFvBTfm2QWGFzOTJ3p89bw3uyaCSfCaIfWrmUMNM4fcMT/fyR6am9e4F3zfsg9zYaY6AX4zIgOtxCO+4yA0Lu48z6zN8T5tpn9koej5A1txgllgAgAA", ("Quick productive tech"))
-  [bool]$CopyProfile
-  [bool]$autoLoad = $true
-  [bool]$autoUpdate = $true
-  [bool]$IsLoaded = $false
+  static [cliart]$Banner = [cliart]::Create("H4sIAAAAAAAAA22SQQ+CMAyFf5AHTVwiV2UHCVFMDOyMiS4kHHA4iP/edmW2EA4v27r27XsE1ZmP6u4nlvEq1IzP0qMNKvLKPfPSsirnQ61y1jVtdmvaeg/rGdYDnYMuMK/prlboU9rN3ws96AzqC+EFc8CiWZKR+fhMfZM/eUa+OTPv41sPPXFvBTfm2QWGFzOTJ3p89bw3uyaCSfCaIfWrmUMNM4fcMT/fyR6am9e4F3zfsg9zYaY6AX4zIgOtxCO+4yA0Lu48z6zN8T5tpn9koej5A1txgllgAgAA", ("Quick productive tech"))
+  static [ShellConfig]$config = @{}
+
   dotProfile() { }
   dotProfile([string]$Json) {
     $this.Import($Json)
   }
   dotProfile([System.IO.FileInfo]$JsonPath) {
-    $this.Import($(Get-Content $JsonPath.FullName))
+    $this.Import((Get-Content $JsonPath.FullName))
   }
   [void] Install() {
     # Copies the profile Script to all ProfilePaths
     [dotProfile]::Install($(Get-Variable -Name PROFILE -Scope global).Value)
   }
-  [object] static Install([string]$Path) {
+  static [object] Install([string]$Path) {
     # Installs all necessary cli stuff as configured.
     if ($null -eq [dotProfile]::config) {
       throw [System.ArgumentNullException]::new('Config')
@@ -591,27 +694,25 @@ class dotProfile {
     $IsSuccess = $true; $ErrorRecord = $Result = $Output = $null
     try {
       #region    Self_Update
-      if ([dotProfile]::config.dotProfile.autoUpdate) {
+      if ([dotProfile]::config.AutoUpdate) {
         # Make $profile Auto update itself to the latest version gist
-        Invoke-Command -ScriptBlock $([ScriptBlock]::Create({
-              While ($true) {
-                Start-Sleep 3 #seconds
-                #Run this script, change the text below, and save this script
-                #and the PowerShell window stays open and starts running the new version without a hitch
-                # "Hi"
-                $lastWriteTimeOfThisScriptNow = [datetime](Get-ItemProperty -Path $PSCommandPath -Name LastWriteTime).LastWriteTime
-                if ($lastWriteTimeOfThisScriptWhenItFirstStarted -ne $lastWriteTimeOfThisScriptNow) {
-                  Get-LatestdotProfile
-                  exit
-                }
-              }
+        Invoke-Command -ScriptBlock {
+          While ($true) {
+            Start-Sleep 3 #seconds
+            #Run this script, change the text below, and save this script
+            #and the PowerShell window stays open and starts running the new version without a hitch
+            # "Hi"
+            $lastWriteTimeOfThisScriptNow = [datetime](Get-ItemProperty -Path $PSCommandPath -Name LastWriteTime).LastWriteTime
+            if ($lastWriteTimeOfThisScriptWhenItFirstStarted -ne $lastWriteTimeOfThisScriptNow) {
+              Get-LatestdotProfile
+              exit
             }
-          )
-        )
+          }
+        }
       }
       #endregion Self_Update
-      if ([dotProfile]::config.dotProfile.autoLoad) {
-        if (![dotProfile]::config.dotProfile.IsLoaded) {
+      if ([dotProfile]::config.AutoLoad) {
+        if (![dotProfile]::config.IsLoaded) {
           # Invoke-Command -ScriptBlock $Load_Profile_Functions
           $IsSuccess = $? -and $([dotProfile]::SetHostUI())
           $IsSuccess = $? -and $([dotProfile]::Set_PowerlinePrompt())
@@ -624,7 +725,7 @@ class dotProfile {
         $IsSuccess = $? -and $([dotProfile]::Set_PowerlinePrompt())
       }
       # show Banner # or 'Message Of The Day' ...
-      if (($IsSuccess -eq $true) -and [dotProfile]::config.dotProfile.IsLoaded) {
+      if (($IsSuccess -eq $true) -and [dotProfile]::config.IsLoaded) {
         Write-Host ''
         Write-Console $([dotProfile]::Banner) -ForegroundColor SlateBlue -BackgroundColor Black;
         Write-Host ''
@@ -642,7 +743,7 @@ class dotProfile {
     }
     return $Result
   }
-  [bool] static SetHostUI() {
+  static [bool] SetHostUI() {
     $Title = [dotProfile]::config.Title
     $user = [Security.Principal.WindowsIdentity]::GetCurrent()
     [void][Security.Principal.WindowsIdentity]::GetAnonymous()
@@ -676,14 +777,14 @@ class dotProfile {
     $c = "[System.Text.Encoding]::Get_{0}()" -f [dotProfile]::config.Encoding
     [console]::InputEncoding = [console]::OutputEncoding = [scriptblock]::Create($c).Invoke()
     #Banner was Generated using an online tool, then converted to base64 for easyUsage
-    [dotProfile]::config.dotProfile.IsLoaded = $true
+    [dotProfile]::config.IsLoaded = $true
     return $true -and $([dotProfile]::Set_PowerlinePrompt())
   }
   [bool] static hidden Set_PowerlinePrompt() {
     # Sets Custom prompt if nothing goes wrong then shows a welcome Ascii Art
     $IsSuccess = $true
     try {
-      $null = New-Item -Path function:prompt -Value $([dotProfile]::config.dotProfile.PSObject.Methods['ShowPrompt']) -Force
+      $null = New-Item -Path function:prompt -Value $([dotProfile]::config.PSObject.Methods['ShowPrompt']) -Force
       $IsSuccess = $IsSuccess -and $?
     } catch {
       $IsSuccess = $false
@@ -703,7 +804,7 @@ class dotProfile {
     }
     # $this.IsLoaded = $true
   }
-  [string]ShowPrompt() {
+  [string] ShowPrompt() {
     $realLASTEXITCODE = $LASTEXITCODE
     $nl = [Environment]::NewLine;
     # UTF8 Characters from https://www.w3schools.com/charsets/ref_utf_box.asp
@@ -720,7 +821,7 @@ class dotProfile {
     # Grab current loaction
     try {
       $location = "$((Get-Variable ExecutionContext -Scope local).SessionState.Path.CurrentLocation.Path)";
-      $shortLoc = Invoke-PathShortener $location -TruncateChar $dt;
+      $shortLoc = Get-ShortPath $location -TruncateChar $dt;
     } catch {
       Set-Location ..
     }
@@ -737,7 +838,7 @@ class dotProfile {
       } elseif ($location.Contains("$env:UserProfile")) {
         $location = $($location.replace("$env:UserProfile", "$swiglyChar"));
         if ($location.Length -gt 25) {
-          $location = $(Invoke-PathShortener $location -TruncateChar $dt)
+          $location = $(Get-ShortPath $location -TruncateChar $dt)
         }
         Write-Host $location -NoNewline -ForegroundColor DarkCyan
       } else {
@@ -1690,9 +1791,10 @@ class PsRunner {
 
 # Types that will be available to users when they import the module.
 $typestoExport = @(
-  [NetworkManager], [RGB], [color],
-  [ProgressUtil], [StackTracer], [ShellConfig], [dotProfile],
-  [PsRunner], [PsRecord], [cli], [cliart]
+  [NetworkManager], [InstallRequirements],
+  [Requirement], [RGB], [color], [ProgressUtil],
+  [InstallException], [InstallFailedException]
+  [StackTracer], [ShellConfig], [dotProfile], [PsRunner], [PsRecord], [cli], [cliart]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
 foreach ($Type in $typestoExport) {

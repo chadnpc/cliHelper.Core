@@ -1,3 +1,3 @@
 function Get-HostWidth {
-  return [Spectre.Console.AnsiConsole]::Profile.Width
+  return $Host.UI.RawUI.BufferSize.Width
 }

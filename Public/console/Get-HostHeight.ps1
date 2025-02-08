@@ -1,3 +1,3 @@
 function Get-HostHeight {
-  return [Spectre.Console.AnsiConsole]::Profile.Height
+  return  $Host.UI.RawUI.BufferSize.Height
 }
