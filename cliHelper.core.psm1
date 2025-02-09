@@ -5,6 +5,7 @@ using namespace System.Web
 using namespace System.Text
 using namespace System.Threading
 using namespace System.Collections
+using namespace System.Diagnostics
 using namespace System.ComponentModel
 using namespace System.Threading.workers
 using namespace System.Collections.Generic
@@ -33,6 +34,7 @@ class InstallFailedException : InstallException {
   InstallFailedException([string]$message, [Exception]$innerException) : base($message, $innerException) {}
 }
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '')]
 class Requirement {
   [string] $Name
   [version] $Version
@@ -81,7 +83,7 @@ class Requirement {
       if ($What_If.IsPresent) {
         Write-Console "Would install: $($this.Name)" -f Yellow
       } else {
-        [ScriptBlock]::Create("$($this.InstallScript)").Invoke()
+        $null = $this.InstallScript | Invoke-Expression
       }
       $is_resolved = $?
     }
@@ -97,7 +99,7 @@ Class InstallRequirements {
   InstallRequirements() {}
   InstallRequirements([array]$list) { $this.list = $list }
   InstallRequirements([List[array]]$list) { $this.list = $list.ToArray() }
-  InstallRequirements([hashtable]$Map) { $Map.Keys | ForEach-Object { $Map[$_] ? ($this.$_ = $Map[$_]) : $null } }
+  InstallRequirements([Hashtable]$Map) { $Map.Keys | ForEach-Object { $Map[$_] ? ($this.$_ = $Map[$_]) : $null } }
   InstallRequirements([Requirement]$req) { $this.list += $req }
   InstallRequirements([Requirement[]]$list) { $this.list += $list }
 
@@ -641,22 +643,15 @@ class ShellConfig : PsRecord {
   [TimeZone]$TimeZone = [TimeZone]::CurrentTimeZone #Specifies the computer's time zone.
   [string[]]$VisualEffects #Specifies additional display settings.
   [string[]]$WindowsFeatures
-  [PSObject]$RequiredModules = { ConvertFrom-Json '
-        [
-            {
-                "name": "posh-git",
-                "version": "1.0"
-            },
-            {
-                "name": "oh-my-posh",
-                "version": "1.0"
-            },
-            {
-                "name": "PSReadLine",
-                "version": "2.0.4"
-            }
-        ]
-    '}.Invoke()
+  [InstallRequirements]$RequiredModules = @(
+    ("pipenv", "Python virtualenv management tool", { Install-Pipenv } ),
+    ("oh-my-posh", "A cross platform tool to render your prompt.", { Install-OMP } ),
+    ("PSReadLine", "Provides gread command line editing in the PowerShell console host", { Install-Module PSReadLine } ),
+    ("posh-git", "Provides prompt with Git status summary information and tab completion for Git commands, parameters, remotes and branch names.", { Install-Module posh-git } ),
+    ("PowerType", "A module providing recommendations for common tools. For more information : https://github.com/AnderssonPeter/PowerType", { Install-Module PowerType } ),
+    ("PSFzf", "A wrapper module around Fzf (https://github.com/junegunn/fzf).", { Install-Module PSFzf } ),
+    ("Terminal-Icons", "A module to add file icons to terminal based on file extensions", { Install-Module Terminal-Icons } )
+  )
   [string]$OmpConfig #Path to omp.json
 
   ShellConfig() {}
@@ -1229,6 +1224,36 @@ class AsyncResult {
   }
 }
 
+class Activity : System.Diagnostics.Activity {
+  [string]$StatusDescription
+  [string]$OperationName
+  [string]$TraceId
+  Activity() {}
+  Activity([string]$Name)  : Base($Name) {
+    $this.OperationName = $Name
+    $this.TraceId = [xconvert]::ToGuid($Name).Guid
+  }
+  Activity([object[]]$desc) : Base(($desc[0] ? [string]$desc[0] : [string]::Empty)) {
+    if ($desc[0]) {
+      $this.OperationName = $desc[0]
+      $this.TraceId = [xconvert]::ToGuid([string]$desc[0]).Guid
+    }
+  }
+  [string] ToString() {
+    return '[{0}] {1}' -f $this.Status, $this.DisplayName
+  }
+}
+
+
+class ActivityLog : PsRecord {
+  ActivityLog() {}
+  [void] Add([guid]$Id, [Activity]$Activity) {
+    $this.Add(@{
+        $Id = $Activity
+      }
+    )
+  }
+}
 
 <#
 .SYNOPSIS
@@ -1421,6 +1446,8 @@ class PsRunner {
   hidden [int] $_MinThreads = 2
   hidden [int] $_MaxThreads = [PsRunner]::GetThreadCount()
   static [AsyncResult] $AsyncResult = @()
+  static [Activity] $CurrentActivity = @()
+  static [ActivityLog] $Log = @{}
   static [string] $SyncId = { [void][PsRunner]::SetSyncHash(); return [PsRunner].SyncId }.Invoke() # Unique ID for each runner instance
 
   static PsRunner() {
@@ -1444,7 +1471,7 @@ class PsRunner {
     )
     "PsRunner" | Update-TypeData -MemberName GetOutput -MemberType ScriptMethod -Value {
       $o = [PsRunner]::GetSyncHash()["Output"]; [PsRunner].SyncHash["Output"] = [System.Management.Automation.PSDataCollection[PsObject]]::new()
-      [PsRunner].SyncHash["Runspaces"] = [ConcurrentDictionary[int, powershell]]::new()
+      [PsRunner].SyncHash["Runspaces"] = [ConcurrentDictionary[int, PowerShell]]::new()
       return $o
     } -Force;
   }
@@ -1454,24 +1481,39 @@ class PsRunner {
     return $o
   }
   static [PSDataCollection[PsObject]] Run([scriptblock[]]$Jobs) {
-    if ([PsRunner]::HasPendingJobs()) {
-      throw 'PsRunner has pending Jobs; run them or run [PsRunner]::CleanUp()'
-    }
-    [PsRunner]::CleanUp(); $Jobs.ForEach({ [PsRunner]::Add_BGWorker($_) })
-    $o = [PsRunner]::Run([PsRunner]::GetSyncHash()["Runspaces"]); [PsRunner].SyncHash["Output"] += $o; return $o
+    return [PsRunner]::Run("Running", "In Progress", $Jobs)
   }
-  static [PSDataCollection[PsObject]] Run([ConcurrentDictionary[int, powershell]]$Runspaces) {
+  static [PSDataCollection[PsObject]] Run([string]$ActivityName, [string]$Description, [scriptblock[]]$Jobs) {
+    if ([PsRunner]::HasPendingJobs()) { throw 'PsRunner has pending Jobs; run them or run [PsRunner]::CleanUp()' }
+    [PsRunner]::CleanUp(); $Jobs.ForEach({ [PsRunner]::Add_BGWorker($_) })
+    $o = [PsRunner]::Run($ActivityName, $Description, [PsRunner]::GetSyncHash()["Runspaces"]); [PsRunner].SyncHash["Output"] += $o; return $o
+  }
+  static [PSDataCollection[PsObject]] Run([ConcurrentDictionary[int, PowerShell]]$Runspaces) {
+    return [PsRunner]::Run([PsRunner]::CurrentActivity.DisplayName, [PsRunner]::CurrentActivity.StatusDescription, $Runspaces)
+  }
+  static [PSDataCollection[PsObject]] Run([string]$ActivityName, [string]$Description, [ConcurrentDictionary[int, PowerShell]]$Runspaces) {
     if (![PsRunner]::HasPendingJobs()) {
       Write-Warning "There are no pending jobs. Please run GetOutput(); and Add_BGWorker(); then try again."
       return $null
     }
+    [ValidateNotNullOrWhiteSpace()][string]$Description = $Description
+    [ValidateNotNullOrWhiteSpace()][string]$ActivityName = $ActivityName
     [PsRunner].SyncHash["Runspaces"] = $Runspaces
+    [PsRunner]::CurrentActivity.DisplayName = $ActivityName
+    [void][PsRunner]::CurrentActivity.SetStartTime([datetime]::Now)
+    [void][PsRunner]::CurrentActivity.SetStatus("Ok")
+    [PsRunner]::CurrentActivity.StatusDescription = $Description
     $i = 0; $Handle = [PsRunner].Instance.BeginInvoke()
     while ($Handle.IsCompleted -eq $false) {
       Start-Sleep -Milliseconds 500
-      Write-Progress -Activity "Running" -Status "In Progress" -PercentComplete $($i % 100)
+      Write-Progress -Activity ([PsRunner]::CurrentActivity.DisplayName) -Status ([PsRunner]::CurrentActivity.StatusDescription) -PercentComplete $($i % 100)
       $i += 5
     }
+    [void][PsRunner]::CurrentActivity.SetEndTime([datetime]::Now)
+    [void][PsRunner]::Log.Add([xconvert]::ToGuid($ActivityName), [PsRunner]::CurrentActivity)
+    [void][PsRunner]::CurrentActivity.SetStatus("Unset")
+    [PsRunner]::CurrentActivity.DisplayName = $null
+    [PsRunner]::CurrentActivity.StatusDescription = $null
     return [PsRunner].Instance.EndInvoke($Handle)
   }
   static [AsyncResult] RunAsync() {
@@ -1484,7 +1526,7 @@ class PsRunner {
     [PsRunner]::CleanUp(); $Jobs.ForEach({ [PsRunner]::Add_BGWorker($_) })
     return [PsRunner]::RunAsync([PsRunner]::GetSyncHash()["Runspaces"])
   }
-  static [AsyncResult] RunAsync([ConcurrentDictionary[int, powershell]]$Runspaces) {
+  static [AsyncResult] RunAsync([ConcurrentDictionary[int, PowerShell]]$Runspaces) {
     if (![PsRunner]::HasPendingJobs()) {
       Write-Warning "There are no pending jobs. Please run GetOutput(); and Add_BGWorker(); then try again.";
       return $null
@@ -1568,7 +1610,7 @@ class PsRunner {
     $ps = $ps.AddScript($Worker)
     if ($Arguments.Count -gt 0) { $Arguments.ForEach({ [void]$ps.AddArgument($_) }) }
     # $ps.RunspacePool = [PsRunner].SyncHash["RunspacePool"] # https://github.com/PowerShell/PowerShell/issues/18934
-    # Save each Worker in a dictionary, ie: {Int_Id, Powershell_instance_on_different_thread}
+    # Save each Worker in a dictionary, ie: {Int_Id, PowerShell_instance_on_different_thread}
     if (![PsRunner]::GetSyncHash()["Runspaces"].TryAdd($Id, $ps)) { throw [System.InvalidOperationException]::new("worker $Id already exists.") }
     [PsRunner].SyncHash["Jobs"][$Id] = @{
       __PS   = ([ref]$ps).Value
@@ -1688,7 +1730,7 @@ class PsRunner {
       [PsRunner].PsObject.Properties.Add([PsNoteProperty]::new('SyncHash', [Hashtable]::Synchronized(@{
               Id          = [string]::Empty
               Jobs        = [Hashtable]::Synchronized(@{})
-              Runspaces   = [ConcurrentDictionary[int, powershell]]::new()
+              Runspaces   = [ConcurrentDictionary[int, PowerShell]]::new()
               JobsCleanup = @{}
               Output      = [PSDataCollection[PsObject]]::new()
             }
@@ -1772,7 +1814,7 @@ class PsRunner {
     [PsRunner].SyncHash.Jobs.Clear()
     # [PsRunner].SyncHash["Instance"] = [PsRunner]::Create_runspace_manager()
     $rs = [PsRunner]::GetSyncHash()["Runspaces"]
-    [PsRunner].SyncHash.Runspaces = [ConcurrentDictionary[int, powershell]]::new();
+    [PsRunner].SyncHash.Runspaces = [ConcurrentDictionary[int, PowerShell]]::new();
     $rs.keys.Where({ $rs[$_].InvocationStateInfo.State -ne "Completed" }).Foreach({ [PsRunner].SyncHash.Runspaces[$_] = $rs[$_] })
     if ([PsRunner].SyncHash.Results) { [PsRunner].SyncHash.Results = @() }
     if ([PsRunner].SyncHash.Output) { [PsRunner].SyncHash.Output = [PSDataCollection[PsObject]]::new() }
@@ -1792,8 +1834,8 @@ class PsRunner {
 # Types that will be available to users when they import the module.
 $typestoExport = @(
   [NetworkManager], [InstallRequirements],
-  [Requirement], [RGB], [color], [ProgressUtil],
-  [InstallException], [InstallFailedException]
+  [Requirement], [RGB], [color], [ProgressUtil], [ActivityLog],
+  [InstallException], [InstallFailedException], [Activity], [AsyncResult],
   [StackTracer], [ShellConfig], [dotProfile], [PsRunner], [PsRecord], [cli], [cliart]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
