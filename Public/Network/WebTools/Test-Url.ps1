@@ -4,12 +4,12 @@ function Test-Url {
   # .DESCRIPTION
   #     Checks if a url(or a bunch/array of urls) is valid
   # .EXAMPLE
-  #     PS C:\> Test-Url 'https://github.com/alainQtec/'
+  #     PS C:\> Test-Url 'https://github.com/chadnpc/'
   #     Testing only one link
 
   # .EXAMPLE
   #     @(
-  #     'https://github.com/alainQtec/',
+  #     'https://github.com/chadnpc/',
   #     'https://some::_invalid_url_text',
   #     'https://github.com/invalid-link-2/'
   #     ) | Test-Url

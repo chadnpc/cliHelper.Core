@@ -8,7 +8,7 @@ function Write-MOTD {
 		Author: Markus Fleschutz /License: CC0
         https://github.com/fleschutz/PowerShell
 	.LINK
-		https://github.com/alainQtec/devHelper/blob/main/Private/devHelper.Cli/Public/Write-MOTD.ps1
+		https://github.com/chadnpc/devHelper/blob/main/Private/devHelper.Cli/Public/Write-MOTD.ps1
 	#>
   [CmdletBinding()]
   [Reflection.AssemblyMetadata("title", "Write-MOTD")]

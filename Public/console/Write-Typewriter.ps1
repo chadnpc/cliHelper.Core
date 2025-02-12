@@ -6,7 +6,7 @@ function Write-Typewriter {
 		$random_Paragraph = Get-LoremIpsum
 		$random_Paragraph | Write-Typewriter
 	.LINK
-		https://github.com/alainQtec/devHelper/blob/main/Private/devHelper.Cli/Public/Write-Typewriter.ps1
+		https://github.com/chadnpc/devHelper/blob/main/Private/devHelper.Cli/Public/Write-Typewriter.ps1
 	#>
   [CmdletBinding()]
   param (

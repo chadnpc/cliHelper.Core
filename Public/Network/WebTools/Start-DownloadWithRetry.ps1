@@ -45,7 +45,7 @@ function Start-DownloadWithRetry {
       Version: 1.0
 
     .LINK
-      Online Version: https://github.com/alainQtec/cliHelper.Core/blob/main/Public/Network/WebTools/Start-DownloadWithRetry.ps1
+      Online Version: https://github.com/chadnpc/cliHelper.Core/blob/main/Public/Network/WebTools/Start-DownloadWithRetry.ps1
   #>
   [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "")]
   [Alias('DownloadWithRetry')][OutputType([IO.FileInfo])]

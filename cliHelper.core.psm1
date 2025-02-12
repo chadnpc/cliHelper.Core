@@ -1068,7 +1068,7 @@ class NetworkManager {
     }
   }
   static [void] BlockAllOutbound() {
-    $HostOs = [xcrypt]::Get_Host_Os()
+    $HostOs = Get-HostOs
     if ($HostOs -eq "Linux") {
       sudo iptables -P OUTPUT DROP
     } else {
@@ -1076,7 +1076,7 @@ class NetworkManager {
     }
   }
   static [void] UnblockAllOutbound() {
-    $HostOs = [xcrypt]::Get_Host_Os()
+    $HostOs = Get-HostOs
     if ($HostOs -eq "Linux") {
       sudo iptables -P OUTPUT ACCEPT
     } else {
@@ -1510,7 +1510,7 @@ class PsRunner {
       $i += 5
     }
     [void][PsRunner]::CurrentActivity.SetEndTime([datetime]::Now)
-    [void][PsRunner]::Log.Add([xconvert]::ToGuid($ActivityName), [PsRunner]::CurrentActivity)
+    [void][PsRunner]::Log.Add(($ActivityName | xconvert ToGuid), [PsRunner]::CurrentActivity)
     [void][PsRunner]::CurrentActivity.SetStatus("Unset")
     [PsRunner]::CurrentActivity.DisplayName = $null
     [PsRunner]::CurrentActivity.StatusDescription = $null

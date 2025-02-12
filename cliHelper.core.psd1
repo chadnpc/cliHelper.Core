@@ -21,7 +21,7 @@
   Author                = 'Alain Herve'
 
   # Company or vendor of this module
-  CompanyName           = 'alainQtec'
+  CompanyName           = 'chadnpc'
 
   # Copyright statement for this module
   Copyright             = 'Copyright © <Year> Alain Herve. All rights reserved.'
@@ -72,7 +72,7 @@
       # Tags applied to this module. These help with module discovery in online galleries.
       Tags         = 'convert', 'xconvert'
       LicenseUri   = 'https://alain.mit-license.org/'
-      ProjectUri   = 'https://github.com/alainQtec/cliHelper.core'
+      ProjectUri   = 'https://github.com/chadnpc/cliHelper.core'
       IconUri      = 'https://github.com/user-attachments/assets/160c2204-4a29-47a0-a8fc-a2f441317e58'
       ReleaseNotes = "
 <ReleaseNotes>

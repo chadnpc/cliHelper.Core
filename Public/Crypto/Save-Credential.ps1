@@ -7,7 +7,7 @@ function Save-Credential {
     .NOTES
         This function is supported on windows only
     .LINK
-        https://github.com/alainQtec/cliHelper.core
+        https://github.com/chadnpc/cliHelper.core
     .EXAMPLE
         Save-Credential youtube.com/@memeL0rd memeL0rd $(Read-Host -AsSecureString -Prompt "memeLord's youtube password")
     #>

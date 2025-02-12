@@ -16,7 +16,7 @@ function Get-ItemSize {
     .EXAMPLE
         gci -File -Recurse -Depth 2 | Sort-Object Length -Descending | Select-Object name, @{l='Size'; e={Get-ItemSize $_.fullName}}
     .LINK
-        https://github.com/alainQtec/devHelper/blob/main/Private/devHelper.Cli/Public/Get-ItemSize.ps1
+        https://github.com/chadnpc/devHelper/blob/main/Private/devHelper.Cli/Public/Get-ItemSize.ps1
     #>
   [CmdletBinding()]
   [OutputType([PSObject])]

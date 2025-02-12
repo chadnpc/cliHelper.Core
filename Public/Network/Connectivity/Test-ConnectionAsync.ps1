@@ -22,7 +22,7 @@ function Test-ConnectionAsync {
   .OUTPUTS
       [pscustomobject] with output from Net.AsyncPingResult and optionally the source address
   .EXAMPLE
-      Test-ConnectionAsync google.com, youtube.com, bing.com, github.com, alainQtec.dev
+      Test-ConnectionAsync google.com, youtube.com, bing.com, github.com, alainqtec.dev
 
       ComputerName  IPAddress        Result
       ------------  ---------        ------
@@ -30,14 +30,14 @@ function Test-ConnectionAsync {
       youtube.com   172.217.170.174 Success
       bing.com      204.79.197.200  Success
       github.com    140.82.121.4    Success
-      alainQtec.dev 185.199.110.153 Success
+      alainqtec.dev 185.199.110.153 Success
 
 
     Description
     -----------
     Performs asynchronous ping test against listed systems and lists brief output.
   .EXAMPLE
-    Test-ConnectionAsync google.com, youtube.com, bing.com, github.com, alainQtec.dev -Full | ft
+    Test-ConnectionAsync google.com, youtube.com, bing.com, github.com, alainqtec.dev -Full | ft
 
     ComputerName  IPAddress        Result BufferSize ResponseTime DontFragment Timeout TimeToLive
     ------------  ---------        ------ ---------- ------------ ------------ ------- ----------
@@ -45,7 +45,7 @@ function Test-ConnectionAsync {
     youtube.com   172.217.170.174 Success         32           79         True    2000        128
     bing.com      204.79.197.200  Success         32          137         True    2000        128
     github.com    140.82.121.3    Success         32          252         True    2000        128
-    alainQtec.dev 185.199.110.153 Success         32          136         True    2000        128
+    alainqtec.dev 185.199.110.153 Success         32          136         True    2000        128
 
     Description
     -----------

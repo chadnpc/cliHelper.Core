@@ -38,7 +38,7 @@ function Get-EncryptedObject {
         $(Get-Item $PathtoMyGoober\MyLocalVault_Export.json).Encrypt();
         $vault.RetrieveAll() | % { $vault.Remove($vault.Retrieve($_.Resource, $_.UserName)); Write-verbose "[i] Removed $($_.Resource)" }
     .LINK
-        https://github.com/alainQtec/cliHelper.core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
+        https://github.com/chadnpc/cliHelper.core/blob/main/Private/cliHelper.core.xcrypt/cliHelper.core.xcrypt.psm1
     .EXAMPLE
         $enc = Encrypt -Object "Hello World!" -Password $([ArgonCage]::GetPassword()) -KeyOutFile .\PublicKee.txt
         $dec = Decrypt -InputBytes $enc -Password $([ArgonCage]::GetPassword()) -PublicKey $(cat .\PublicKee.txt)

@@ -7,7 +7,7 @@ function Get-SavedCredentials {
     .NOTES
         This function is supported on windows only
     .LINK
-        https://github.com/alainQtec/cliHelper.core
+        https://github.com/chadnpc/cliHelper.core
     .EXAMPLE
         Get-SavedCredentials
         Enumerates all SavedCredentials

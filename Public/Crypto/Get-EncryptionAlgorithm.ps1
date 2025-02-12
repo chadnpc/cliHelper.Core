@@ -7,7 +7,7 @@ function Get-EncryptionAlgorithm {
     .NOTES
         Information or caveats about the function e.g. 'This function is not supported in Linux'
     .LINK
-        https://github.com/alainQtec/cliHelper.core/blob/main/Public/xcrypt/Get-EncryptionAlgorithm.ps1
+        https://github.com/chadnpc/cliHelper.core/blob/main/Public/xcrypt/Get-EncryptionAlgorithm.ps1
     .EXAMPLE
         Get-EncryptionAlgorithm -key "dsfjkmsjkfnsdkcnmdimsidfcsdcmsdlkxiddsdcmsdlcdlilsdldd "
         Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines

@@ -14,7 +14,7 @@ function Write-Console {
   #   [string]::Join([char]10, (tree | Out-String)) | Write-Console -f SlateBlue
   #   Will write the string result of the tree command in a SlateBlue foreground color.
   # .LINK
-  #   https://github.com/alainQtec/cliHelper.Core/blob/main/Public/console/Write-Console.ps1
+  #   https://github.com/chadnpc/cliHelper.Core/blob/main/Public/console/Write-Console.ps1
   # .INPUTS
   #   String
   # .OUTPUTS

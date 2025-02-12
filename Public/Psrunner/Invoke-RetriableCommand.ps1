@@ -69,7 +69,7 @@ function Invoke-RetriableCommand {
 
     - All Unnamed arguments will be passed as arguments to the script or command
   .LINK
-    Online Version: https://github.com/alainQtec/cliHelper.Core/blob/main/Public/Psrunner/Invoke-RetriableCommand.ps1
+    Online Version: https://github.com/chadnpc/cliHelper.Core/blob/main/Public/Psrunner/Invoke-RetriableCommand.ps1
   #>
   [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ScriptBlock')]
   [OutputType([Results])][Alias('Invoke-RtCommand')]

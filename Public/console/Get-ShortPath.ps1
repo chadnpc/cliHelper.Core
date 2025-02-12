@@ -5,7 +5,7 @@ function Get-ShortPath {
   .DESCRIPTION
     A longer description of the function, its purpose, common use cases, etc.
   .LINK
-    https://github.com/alainQtec/cliHelper.Core/blob/main/Public/console/Get-ShortPath.ps1
+    https://github.com/chadnpc/cliHelper.Core/blob/main/Public/console/Get-ShortPath.ps1
   .EXAMPLE
     pwd | gsp
   #>
