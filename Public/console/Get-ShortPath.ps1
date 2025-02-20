@@ -39,8 +39,8 @@ function Get-ShortPath {
   )
 
   process {
-    if (![xcrypt]::IsValidUrl($Path)) {
-      $Path = [xcrypt]::GetUnResolvedPath($Path)
+    if (!($Path | xcrypt IsValidUrl)) {
+      $Path = $Path | xcrypt GetUnResolvedPath
     } else {
       $PSBoundParameters["separator"] = "/"
     }
