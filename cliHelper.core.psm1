@@ -667,7 +667,10 @@ class ShellConfig : PsRecord {
   }
 }
 class dotProfile {
-  static [cliart]$Banner = [cliart]::Create("H4sIAAAAAAAAA22SQQ+CMAyFf5AHTVwiV2UHCVFMDOyMiS4kHHA4iP/edmW2EA4v27r27XsE1ZmP6u4nlvEq1IzP0qMNKvLKPfPSsirnQ61y1jVtdmvaeg/rGdYDnYMuMK/prlboU9rN3ws96AzqC+EFc8CiWZKR+fhMfZM/eUa+OTPv41sPPXFvBTfm2QWGFzOTJ3p89bw3uyaCSfCaIfWrmUMNM4fcMT/fyR6am9e4F3zfsg9zYaY6AX4zIgOtxCO+4yA0Lu48z6zN8T5tpn9koej5A1txgllgAgAA", ("Quick productive tech"))
+  #.LINK
+  # https://pastebin.com/raw/rdqSxHT8
+  # usage: $Banner.Write(19, $false, $true)
+  static [cliart]$Banner = [cliart]::Create("H4sIAAAAAAAAA61S0QrCMAz8IF8E+wdOmBQcE22lb0Mn1FUtgvj70s7ZtOvaID4cpDlyl9Ar6odUupTqfhlDnH1ueMd6mHkMP+WR00jusNosn5TLyoKpirKuh+vNXN21lA+APex8hvd6f/V4zSnRzboH3xLdfMAbonlNND85PgY7g+ShfpTfg/qA8zAzcMf4DYXJ7Pd/y3RexE4qUfSAM2g+ph/UAuyT87BYjPVGHkeTWXZ1ufWzU1F2a/GZzfBY/XCfSQ8AlryhtpmF/wthshDmN5JpNP+LfsIjxPQNb9ytVCVoBQAA", ("Build. Ship. Repeat."))
   static [ShellConfig]$config = @{}
 
   dotProfile() { }
@@ -979,8 +982,8 @@ class cliart {
   static hidden [cliart] _init_([string]$s, [string[]]$taglines, $o) {
     $use_verbose = (Get-Variable VerbosePreference -Scope global -ValueOnly) -eq 'Continue'
     $i = switch ($true) {
-      ([xcrypt]::IsValidUrl($s)) { Get-Item (Start-DownloadWithRetry -Uri $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
-      ([xcrypt]::IsBase64String($s)) { $s; break }
+      ($s | xcrypt IsValidUrl) { Get-Item (Start-DownloadWithRetry -Uri $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
+      ($s | xcrypt IsBase64String) { $s; break }
       ([IO.Path]::IsPathFullyQualified($s)) { (Get-Item $s); break }
       Default {
         throw [ArgumentException]::new('Invalid input string. [cliart]::Create() requires a valid url, base64 string or path.')
@@ -1101,7 +1104,7 @@ class NetworkManager {
     $contentLength = $response.ContentLength
     $stream = $response.GetResponseStream()
     $buffer = New-Object byte[] 1024
-    $outPath = [xcrypt]::GetUnResolvedPath($outFile)
+    $outPath = $outFile | xcrypt GetUnResolvedPath
     if ([System.IO.Directory]::Exists($outFile)) {
       if (!$Force) { throw [ArgumentException]::new("Please provide valid file path, not a directory.", "outFile") }
       $outPath = Join-Path -Path $outFile -ChildPath $name
@@ -1231,12 +1234,12 @@ class Activity : System.Diagnostics.Activity {
   Activity() {}
   Activity([string]$Name)  : Base($Name) {
     $this.OperationName = $Name
-    $this.TraceId = [xconvert]::ToGuid($Name).Guid
+    $this.TraceId = ($Name | xconvert ToGuid).Guid
   }
   Activity([object[]]$desc) : Base(($desc[0] ? [string]$desc[0] : [string]::Empty)) {
     if ($desc[0]) {
       $this.OperationName = $desc[0]
-      $this.TraceId = [xconvert]::ToGuid([string]$desc[0]).Guid
+      $this.TraceId = ([string]$desc[0] | xconvert ToGuid).Guid
     }
   }
   [string] ToString() {
