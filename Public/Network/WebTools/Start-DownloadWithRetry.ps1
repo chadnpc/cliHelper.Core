@@ -54,7 +54,7 @@ function Start-DownloadWithRetry {
     # Specifies the Uri of the file to download. This parameter is mandatory.
     [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true)]
     [ValidateScript({
-        if ([xcrypt]::IsValidUrl($_)) {
+        if (($_ | xcrypt IsValidUrl)) {
           return $true
         }; throw [System.ArgumentException]::new("Please Provide a valid Uri: $_", "Uri")
       })]
