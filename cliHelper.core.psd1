@@ -73,7 +73,7 @@
       Tags         = 'convert', 'xconvert'
       LicenseUri   = 'https://alain.mit-license.org/'
       ProjectUri   = 'https://github.com/chadnpc/cliHelper.core'
-      IconUri      = 'https://github.com/user-attachments/assets/160c2204-4a29-47a0-a8fc-a2f441317e58'
+      IconUri      = 'https://github.com/user-attachments/assets/594f7b37-92f6-4ca3-9172-8c2a5a183aff'
       ReleaseNotes = "
 <ReleaseNotes>
 "
