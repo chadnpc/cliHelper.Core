@@ -35,6 +35,8 @@ Import-Module cliHelper.core
 ('🐴' | Out-Unicorn) -eq '🦄' # true
 # the function above is for entertainment but it showcases alot of animations,
 # progress bars and lots cool cli funtions that this module has.
+
+$art = Create-CliArt "https://pastebin.com/raw/p29UR385" -Taglines "Build. Ship. Repeat."; $art.Replace("x.y.z", "0.2.3"); $art.Write(15, $false, $true)
 ```
 
 demo :
