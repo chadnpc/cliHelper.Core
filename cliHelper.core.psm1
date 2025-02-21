@@ -1029,6 +1029,10 @@ class cliart {
     if (![string]::IsNullOrWhiteSpace($last_line)) { $last_line | Write-Console -f $TaglineColor -NoNewLine:$Nonewline -Animate:$Animate }
     if (![string]::IsNullOrWhiteSpace($AdditionalText)) { $AdditionalText | Write-Console -f LightCyan -Animate:$Animate }
   }
+  [void] Replace([string]$oldValue, [string]$newValue) {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($this.ToString().replace($oldValue, $newValue))
+    $this.cstr = [convert]::ToBase64String($bytes) | xconvert ToCompressed;
+  }
   [string] GetTagline() { return $this.taglines | Get-Random }
 
   [string] ToString() { return [cliart]::Print($this.cstr) }
