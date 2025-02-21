@@ -1,10 +1,11 @@
-<h1> <img align="right" src="https://github.com/user-attachments/assets/160c2204-4a29-47a0-a8fc-a2f441317e58" width="200" height="200" alt="icon" /></h1>
-
+<h2>
+<img align="right" src="https://github.com/user-attachments/assets/594f7b37-92f6-4ca3-9172-8c2a5a183aff" width="190" height="190" alt="icon" />
+</h2>
 <div align="Left">
   <a href="https://www.powershellgallery.com/packages/cliHelper.core"><b>cliHelper.core</b></a>
   <p>
-    🔥 A collections of essential PowerShell functions that stonks up your terminal game</b>.
-    </br></br>
+    A collections of essential PowerShell functions that stonks up your terminal game
+    </br></br></br>
     <a href="https://github.com/chadnpc/cliHelper.core/actions/workflows/Build_on_windows.yaml">
     <img src="https://github.com/chadnpc/cliHelper.core/actions/workflows/Build_on_windows.yaml/badge.svg" alt="Build on Windows"/>
     </a>
