@@ -127,9 +127,9 @@ function Write-Console {
     }
     $str = $f + $b + $Text + $resetAttributes
     if (!$NoNewLine.IsPresent) {
-      $Animate ? $([void][cli]::write($str); [Console]::WriteLine()) : ([Console]::WriteLine($str))
+      $Animate ? $([void][ConsoleWriter]::write($str); [Console]::WriteLine()) : ([Console]::WriteLine($str))
     } else {
-      $Animate ? $([void][cli]::write($str)) : ([Console]::Write($str))
+      $Animate ? $([void][ConsoleWriter]::write($str)) : ([Console]::Write($str))
     }
   }
   End {
