@@ -32,7 +32,8 @@ then
 ```PowerShell
 Import-Module cliHelper.core
 
-$art = Create-CliArt "https://pastebin.com/raw/p29UR385" -Taglines "Build. Ship. Repeat."; $art.Replace("x.y.z", "0.2.3"); $art.Write(15, $false, $true)
+$art = Create-CliArt "https://pastebin.com/raw/p29UR385" -Taglines "Build. Ship. Repeat."; $art.Replace("x.y.z", "0.2.3");
+$art.Write(15, $false, $true)
 ```
 
 <!-- 
