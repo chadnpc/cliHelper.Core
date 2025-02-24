@@ -1348,8 +1348,8 @@ class clistyle : PsRecord {
         Write-Verbose "PackageProvider '$name' is already Installed."
       }
     }
-    # Install requied modules:
-    $this.Resolve_module($requiredModules) # we could use Install-Module -Name $_ but it fails sometimes
+    # Install requied modules: # we could use Install-Module -Name $_ but it fails sometimes
+    $requiredModules | Resolve-Module
     # BeautifyTerminal :
     if ($this.IsTerminalInstalled()) {
       $this.AddColorScheme()
@@ -1477,7 +1477,7 @@ class clistyle : PsRecord {
     }
     # Install Fonts
     # the Install-Font function is found in PSWinGlue module
-    $this.Resolve_module('PSWinGlue')
+    "PSWinGlue" | Resolve-Module
     Import-Module -Name PSWinGlue -WarningAction silentlyContinue
     # Elevate to Administrative
     if (!$this.IsAdministrator()) {
@@ -1797,13 +1797,13 @@ class clistyle : PsRecord {
       Write-Host ''
     }
   }
-  [void] Resolve_module([string[]]$names) {
+  [void] Resolve_Module([string[]]$names) {
     if (!$(Get-Variable Resolve_Module_fn -ValueOnly -Scope global -ErrorAction Ignore)) {
       # Write-Verbose "Fetching the Resolve_Module script (One-time/Session only)";
       Set-Variable -Name Resolve_Module_fn -Scope global -Option ReadOnly -Value ([scriptblock]::Create($((Invoke-RestMethod -Method Get https://api.github.com/gists/7629f35f93ae89a525204bfd9931b366).files.'Resolve-Module.ps1'.content)))
     }
     . $(Get-Variable Resolve_Module_fn -ValueOnly -Scope global)
-    Resolve-module -Name $Names
+    Resolve-Module -Name $Names
   }
   [void] Write_RGB([string]$Text, $ForegroundColor) {
     $this.Write_RGB($Text, $ForegroundColor, $true)
@@ -2778,7 +2778,7 @@ class PsRunner {
 
 # Types that will be available to users when they import the module.
 $typestoExport = @(
-  [NetworkManager], [InstallRequirements], [clistyle],
+  [NetworkManager], [InstallRequirements], [clistyle], [HostOS],
   [Requirement], [RGB], [color], [ProgressUtil], [ConsoleReader], [ConsoleWriter],
   [InstallException], [InstallFailedException], [Activity], [AsyncResult], [FontMan],
   [StackTracer], [ShellConfig], [dotProfile], [PsRunner], [PsRecord], [cli], [cliart], [ActivityLog]
