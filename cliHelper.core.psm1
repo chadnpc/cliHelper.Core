@@ -19,7 +19,7 @@ using namespace System.Management.Automation.Runspaces
 
 #region    Classes
 #Requires -RunAsAdministrator
-#Requires -Modules cliHelper.xconvert, cliHelper.errorman, cliHelper.xcrypt
+#Requires -Modules cliHelper.xconvert, cliHelper.xcrypt
 #Requires -Psedition Core
 
 enum HostOS {
