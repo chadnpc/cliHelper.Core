@@ -3,7 +3,7 @@ using namespace System.IO
 using namespace System.Management.Automation
 <#
 .SYNOPSIS
-  cliHelper.core buildScript v0.2.9
+  cliHelper.core buildScript v0.2.8
 .DESCRIPTION
   A custom Psake buildScript for the module cliHelper.core.
 .LINK
