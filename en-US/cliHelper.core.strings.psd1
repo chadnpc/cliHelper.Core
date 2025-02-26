@@ -1,14 +1,13 @@
 
 @{
   ModuleName    = 'cliHelper.core'
-  ModuleVersion = [version]'0.2.6'
+  ModuleVersion = [version]'0.2.7'
   ReleaseNotes  = '# Release Notes
 
-## Version _0.2.6_
+## Version _0.2.7_
 
 ### changelog
-- cliart class now works. Write-Console works and others.
-- Patched a few classes. (now using #requires -Module abc instead of Import-MOdule abc)
-- cliart class now works. Write-Console works and others.
+- Optimised Write-Console and others.
+- added ErrorManager
 '
 }

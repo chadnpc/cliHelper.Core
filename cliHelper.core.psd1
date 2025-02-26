@@ -52,7 +52,6 @@
   FormatsToProcess      = @()
   RequiredModules       = @(
     "cliHelper.xconvert",
-    "cliHelper.errorman",
     "cliHelper.xcrypt"
     # Twilio
   )
@@ -76,7 +75,6 @@
       ProjectUri               = 'https://github.com/chadnpc/cliHelper.core'
       IconUri                  = 'https://github.com/user-attachments/assets/594f7b37-92f6-4ca3-9172-8c2a5a183aff'
       RequireLicenseAcceptance = $false
-      # External dependent modules of this module
       # ExternalModuleDependencies = @()
       # Prerelease               = 'beta'
       ReleaseNotes             = "
