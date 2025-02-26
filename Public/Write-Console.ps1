@@ -14,7 +14,7 @@ function Write-Console {
   #   [string]::Join([char]10, (tree | Out-String)) | Write-Console -f SlateBlue
   #   Will write the string result of the tree command in a SlateBlue foreground color.
   # .LINK
-  #   https://github.com/chadnpc/cliHelper.Core/blob/main/Public/console/Write-Console.ps1
+  #   https://github.com/chadnpc/cliHelper.Core/blob/main/Public/Write-Console.ps1
   # .INPUTS
   #   String
   # .OUTPUTS
@@ -45,7 +45,7 @@ function Write-Console {
             $CompletionResults.Add([System.Management.Automation.CompletionResult]::new($_, $_, "ParameterValue", $_))
           }
         return $CompletionResults
-      })][ValidateScript( { if ([ConsoleWriter]::Colors -contains $_) { return $true } else { throw [System.Management.Automation.ValidationMetadataException]::new("Please provide a valid color name. see [ConsoleWriter]::Colors for a list of valid colors") } })]
+      })][ValidateScript( { return [bool][color]$_ })]
     [string]$ForegroundColor = "LightGray",
 
     # The rgb foreground color of the Object. Defaults to LightGray.
@@ -71,7 +71,7 @@ function Write-Console {
             $CompletionResults.Add([System.Management.Automation.CompletionResult]::new($_, $_, "ParameterValue", $_))
           }
         return $CompletionResults
-      })][ValidateScript( { if ([ConsoleWriter]::Colors -contains $_) { return $true } else { throw [System.Management.Automation.ValidationMetadataException]::new("Please provide a valid color name. see [ConsoleWriter]::Colors for a list of valid colors") } })]
+      })][ValidateScript( { return [bool][color]$_ })]
     [string]$BackgroundColor,
 
     # The background color of the Object. Defaults to transparent if not set.
