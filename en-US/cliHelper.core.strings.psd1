@@ -1,10 +1,10 @@
 
 @{
   ModuleName    = 'cliHelper.core'
-  ModuleVersion = [version]'0.2.4'
+  ModuleVersion = [version]'0.2.5'
   ReleaseNotes  = '# Release Notes
 
-## Version _0.2.4_
+## Version _0.2.5_
 
 ### changelog
 - cliart class now works. Write-Console works and others.

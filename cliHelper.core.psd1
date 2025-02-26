@@ -51,7 +51,6 @@
   TypesToProcess        = @()
   FormatsToProcess      = @()
   RequiredModules       = @(
-    "cliHelper.errorman",
     "cliHelper.xconvert",
     "cliHelper.xcrypt"
     # Twilio
@@ -78,7 +77,7 @@
       RequireLicenseAcceptance   = $false
       # External dependent modules of this module
       ExternalModuleDependencies = @("cliHelper.errorman")
-      # Prerelease = ''
+      Prerelease                 = 'beta'
       ReleaseNotes               = "
 <ReleaseNotes>
 "

@@ -2,11 +2,11 @@
 .SYNOPSIS
     Run Tests
 .EXAMPLE
-    .\Test-Module.ps1 -version 0.2.4
-    Will test the module in .\BuildOutput\cliHelper.core\0.2.4\
+    .\Test-Module.ps1 -version 0.2.5
+    Will test the module in .\BuildOutput\cliHelper.core\0.2.5\
 .EXAMPLE
     .\Test-Module.ps1
-    Will test the latest  module version in .\BuildOutput\cliHelper.core\0.2.4
+    Will test the latest  module version in .\BuildOutput\cliHelper.core\0.2.5
 #>
 param (
   [Parameter(Mandatory = $false, Position = 0)]
