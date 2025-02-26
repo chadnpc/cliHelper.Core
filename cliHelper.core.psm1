@@ -617,7 +617,7 @@ class ShellConfig : PsRecord {
   [string[]]$VisualEffects #Specifies additional display settings.
   [string[]]$WindowsFeatures
   [InstallRequirements]$RequiredModules = @(
-    ("pipenv", "Python virtualenv management tool", { Install-Pipenv } ),
+    ("pipenv", "Python virtualenv management tool", { Install-PipEnv } ),
     ("oh-my-posh", "A cross platform tool to render your prompt.", { Install-OMP } ),
     ("PSReadLine", "Provides gread command line editing in the PowerShell console host", { Install-Module PSReadLine } ),
     ("posh-git", "Provides prompt with Git status summary information and tab completion for Git commands, parameters, remotes and branch names.", { Install-Module posh-git } ),
@@ -1195,6 +1195,7 @@ class FontMan {
 
 class ConsoleWriter : System.IO.TextWriter {
   static hidden [string] $leadPreffix
+  static hidden [string[]] $Colors = [ConsoleWriter]::get_ColorNames()
   static hidden [ValidateNotNull()][scriptblock]$ValidateScript = { param($arg) if ([String]::IsNullOrEmpty($arg)) { throw [ArgumentNullException]::new('text', 'Cannot be Null Or Empty') } }
 
   static [string] write([string]$text) {
@@ -1259,6 +1260,9 @@ class ConsoleWriter : System.IO.TextWriter {
     return $text
   }
   static [byte[]] Encode([string]$text) { return [System.Text.Encoding]::UTF8.GetBytes($text) }
+  static [string[]] get_ColorNames() {
+    return [color].GetMethods().Where({ $_.IsStatic -and $_.Name -like "Get_*" }).Name.Substring(4)
+  }
   hidden [System.Text.Encoding] get_Encoding() { return [System.Text.Encoding]::UTF8 }
 }
 
