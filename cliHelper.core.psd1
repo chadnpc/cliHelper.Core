@@ -77,7 +77,7 @@
       RequireLicenseAcceptance   = $false
       # External dependent modules of this module
       ExternalModuleDependencies = @("cliHelper.errorman")
-      Prerelease                 = 'beta'
+      # Prerelease               = 'beta'
       ReleaseNotes               = "
 <ReleaseNotes>
 "
