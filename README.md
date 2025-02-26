@@ -36,9 +36,7 @@ $art = Create-CliArt "https://pastebin.com/raw/p29UR385" -Taglines "Build. Ship.
 $art.Write(15, $false, $true)
 ```
 
-<!-- 
-demo :
-
+<!--
 https://github.com/user-attachments/assets/2a8c8688-2483-4a44-8801-37fde5016306
 -->
 
