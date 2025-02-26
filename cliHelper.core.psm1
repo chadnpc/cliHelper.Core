@@ -102,10 +102,12 @@ class Requirement {
 #region    Config_classes
 <#
 .EXAMPLE
-  [PsRecord]@{
-    Name  = "johndoe"
-    Email = "johndoe@domain.com"
+  $object = [PsRecord]@{
+    Name        = "johndoe"
+    Email       = "johndoe@domain.com"
+    Currenttime = { return [datetime]::Now }
   }
+
 #>
 class PsRecord {
   hidden [uri] $Remote # usually a gist uri
@@ -131,10 +133,15 @@ class PsRecord {
   }
   [void] Add([hashtable]$table) {
     [ValidateNotNullOrEmpty()][hashtable]$table = $table
-    $Keys = $table.Keys | Where-Object { !$this.HasNoteProperty($_) -and ($_.GetType().FullName -eq 'System.String' -or $_.GetType().BaseType.FullName -eq 'System.ValueType') }
+    $Keys = $table.Keys | Where-Object { !$this.HasProperty($_) -and ($_.GetType().FullName -eq 'System.String' -or $_.GetType().BaseType.FullName -eq 'System.ValueType') }
     foreach ($key in $Keys) {
       if ($key -notin ('File', 'Remote', 'LastWriteTime')) {
-        $this | Add-Member -MemberType NoteProperty -Name $key -Value $table[$key]
+        $nval = $table[$key]; [string]$val_type_name = ($null -ne $nval) ? $nval.GetType().Name : [string]::Empty
+        if ($val_type_name -eq 'ScriptBlock') {
+          $this.PsObject.Properties.Add([PsScriptProperty]::new($key, $nval, [scriptblock]::Create("throw [SetValueException]::new('$key is read-only')")))
+        } else {
+          $this | Add-Member -MemberType NoteProperty -Name $key -Value $nval
+        }
       } else {
         $this.$key = $table[$key]
       }
@@ -145,7 +152,7 @@ class PsRecord {
   }
   [void] Add([string]$key, [System.Object]$value) {
     [ValidateNotNullOrEmpty()][string]$key = $key
-    if (!$this.HasNoteProperty($key)) {
+    if (!$this.HasProperty($key)) {
       $htab = [hashtable]::new(); $htab.Add($key, $value); $this.Add($htab)
     } else {
       Write-Warning "Config.Add() Skipped $Key. Key already exists."
@@ -161,10 +168,11 @@ class PsRecord {
     [ValidateNotNullOrEmpty()][hashtable]$table = $table
     $Keys = $table.Keys | Where-Object { $_.GetType().FullName -eq 'System.String' -or $_.GetType().BaseType.FullName -eq 'System.ValueType' } | Sort-Object -Unique
     foreach ($key in $Keys) {
-      if (!$this.HasNoteProperty($key)) {
-        $this | Add-Member -MemberType NoteProperty -Name $key -Value $table[$key] -Force
+      $nval = $table[$key]; [string]$val_type_name = ($null -ne $nval) ? $nval.GetType().Name : [string]::Empty
+      if ($val_type_name -eq 'ScriptBlock') {
+        $this.PsObject.Properties.Add([PsScriptProperty]::new($key, $nval, [scriptblock]::Create("throw [SetValueException]::new('$key is read-only')") ))
       } else {
-        $this.$key = $table[$key]
+        $this | Add-Member -MemberType NoteProperty -Name $key -Value $nval -Force
       }
     }
   }
@@ -244,9 +252,9 @@ class PsRecord {
   #     Remove-Variable Pass -Force -ErrorAction SilentlyContinue
   #   }
   # }
-  hidden [bool] HasNoteProperty([object]$Name) {
+  [bool] HasProperty([object]$Name) {
     [ValidateNotNullOrEmpty()][string]$Name = $($Name -as 'string')
-    return (($this | Get-Member -Type NoteProperty | Select-Object -ExpandProperty name) -contains "$Name")
+    return $this.PsObject.Properties.Name -contains "$Name"
   }
   [void] Import([String]$FilePath) {
     Write-Host "Import records: $FilePath ..." -ForegroundColor Green
@@ -451,7 +459,7 @@ class RGB {
   }
 }
 
-class Color : System.ValueType {
+class Color : Object {
   static [rgb] $Red = [rgb]::new(255, 0, 0)
   static [rgb] $DarkRed = [rgb]::new(128, 0, 0)
   static [rgb] $Green = [rgb]::new(0, 255, 0)
@@ -584,6 +592,11 @@ class Color : System.ValueType {
   static [rgb] $Wheat = [rgb]::new(245, 222, 179)
   static [rgb] $WhiteSmoke = [rgb]::new(245, 245, 245)
   static [rgb] $YellowGreen = [rgb]::new(154, 205, 50)
+  Color([string]$Name) {
+    if ($null -eq [Color]::$Name) {
+      throw [System.Management.Automation.ValidationMetadataException]::new("Please provide a valid color name. see [ConsoleWriter]::Colors for a list of valid colors")
+    }
+  }
 }
 
 # .SYNOPSIS
@@ -1261,6 +1274,11 @@ class ConsoleWriter : System.IO.TextWriter {
   static [byte[]] Encode([string]$text) { return [System.Text.Encoding]::UTF8.GetBytes($text) }
   static [string[]] get_ColorNames() {
     return [color].GetMethods().Where({ $_.IsStatic -and $_.Name -like "Get_*" }).Name.Substring(4)
+  }
+  static [int] get_ConsoleWidth() {
+    # Force a refresh of the console information
+    [System.Console]::SetCursorPosition([System.Console]::CursorLeft, [System.Console]::CursorTop)
+    return [System.Console]::WindowWidth
   }
   hidden [System.Text.Encoding] get_Encoding() { return [System.Text.Encoding]::UTF8 }
 }
@@ -1983,16 +2001,15 @@ class clistyle : PsRecord {
 class NetworkManager {
   [string] $HostName
   static [System.Net.IPAddress[]] $IPAddresses
-  static [PsRecord] $DownloadOptions = [PsRecord]::New(@{
-      ShowProgress      = $true
-      ProgressBarLength = [int]([Console]::WindowWidth * 0.7)
-      ProgressMessage   = [string]::Empty
-      RetryTimeout      = 1000 #(milliseconds)
-      Headers           = @{}
-      Proxy             = $null
-      Force             = $false
-    }
-  )
+  static [PsRecord] $DownloadOptions = @{
+    ShowProgress      = $true
+    ProgressBarLength = { return [int]([ConsoleWriter]::get_ConsoleWidth() * 0.7) }
+    ProgressMessage   = [string]::Empty
+    RetryTimeout      = 1000 #(milliseconds)
+    Headers           = @{}
+    Proxy             = $null
+    Force             = $false
+  }
   static [string] $caller
 
   NetworkManager ([string]$HostName) {
@@ -2207,13 +2224,11 @@ class ActivityLog : PsRecord {
 .SYNOPSIS
   A simple progress utility class
 .EXAMPLE
-  for ($i = 0; $i -le 100; $i++) {
-    [ProgressUtil]::WriteProgressBar($i, "doing stuff")
-  }
+  for ($i = 0; $i -le 100; $i++) { [ProgressUtil]::WriteProgressBar($i, "doing stuff") }
 .EXAMPLE
   [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 });
 .EXAMPLE
-  $j = [ProgressUtil]::WaitJob("waiting", { Param($ob) Start-Sleep -Seconds 3; return $ob }, (Get-Process pwsh));
+  $j = [ProgressUtil]::WaitJob("Waiting", { Param($ob) Start-Sleep -Seconds 3; return $ob }, (Get-Process pwsh));
   $j | Receive-Job
 
   NPM(K)    PM(M)      WS(M)     CPU(s)      Id  SI ProcessName
@@ -2224,28 +2239,35 @@ class ActivityLog : PsRecord {
   Wait-Task -ScriptBlock { Start-Sleep -Seconds 3; $input | Out-String } -InputObject (Get-Process pwsh)
 .EXAMPLE
   $RequestParams = @{
-    Uri    = "placeholderuri"
-    Method = "Post"
-    Body   = "jsonbody"
+    Uri    = 'https://jsonplaceholder.typicode.com/todos/1'
+    Method = 'GET'
   }
-  $r = [progressUtil]::WaitJob($progressmsg, { $p = $input; Invoke-RestMethod @p }, $RequestParams)
+  $result = [progressUtil]::WaitJob("Making a request", { Param($rp) Start-Sleep -Seconds 2; Invoke-RestMethod @rp }, $RequestParams) | Receive-Job
+  echo $result
+
+  userId id title              completed
+  ------ -- -----              ---------
+      1  1 delectus aut autem     False
 #>
 class ProgressUtil {
-  static hidden [string] $_block = '■';
-  static hidden [string] $_back = "`b";
-  static hidden [string[]] $_twirl = @(
-    "◰◳◲◱",
-    "◇◈◆",
-    "◐◓◑◒",
-    "←↖↑↗→↘↓↙",
-    "┤┘┴└├┌┬┐",
-    "⣾⣽⣻⢿⡿⣟⣯⣷",
-    "|/-\\",
-    "-\\|/",
-    "|/-\\"
-  );
-  static hidden [int] $_twirlIndex = 0
-  static hidden [string]$frames
+  static [PsRecord] $data = @{
+    ShowProgress     = { return (Get-Variable 'VerbosePreference' -ValueOnly) -eq 'Continue' }
+    ProgressBarColor = "LightSeaGreen"
+    ProgressMsgColor = "LightGoldenrodYellow"
+    ProgressBlock    = '■'
+    TwirlFrames      = ''
+    TwirlEmojis      = [string[]]@(
+      "◰◳◲◱",
+      "◇◈◆",
+      "◐◓◑◒",
+      "←↖↑↗→↘↓↙",
+      "┤┘┴└├┌┬┐",
+      "⣾⣽⣻⢿⡿⣟⣯⣷",
+      "|/-\\",
+      "-\\|/",
+      "|/-\\"
+    )
+  }
   static [void] WriteProgressBar([int]$percent) {
     [ProgressUtil]::WriteProgressBar($percent, $true, "")
   }
@@ -2253,49 +2275,62 @@ class ProgressUtil {
     [ProgressUtil]::WriteProgressBar($percent, $true, $message)
   }
   static [void] WriteProgressBar([int]$percent, [bool]$update, [string]$message) {
-    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([Console]::WindowWidth * 0.7), $message)
+    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([ConsoleWriter]::get_ConsoleWidth() * 0.7), $message)
   }
   static [void] WriteProgressBar([int]$percent, [bool]$update, [string]$message, [bool]$Completed) {
-    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([Console]::WindowWidth * 0.7), $message, $Completed)
+    [ProgressUtil]::WriteProgressBar($percent, $update, [int]([ConsoleWriter]::get_ConsoleWidth() * 0.7), $message, $Completed)
   }
   static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength, [string]$message) {
     [ProgressUtil]::WriteProgressBar($percent, $update, $PBLength, $message, $false)
   }
   static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength, [string]$message, [bool]$Completed) {
-    [ValidateNotNull()][int]$PBLength = $PBLength
-    [ValidateNotNull()][int]$percent = $percent
-    [ValidateNotNull()][bool]$update = $update
-    [ValidateNotNull()][string]$message = $message
-    [ProgressUtil]::_back = "`b" * [Console]::WindowWidth
-    if ($update) { [Console]::Write([ProgressUtil]::_back) }
-    Write-Console ("{0} [" -f $message) -f SlateBlue -NoNewLine
-    $p = [int](($percent / 100.0) * $PBLength + 0.5)
-    for ($i = 0; $i -lt $PBLength; $i++) {
-      if ($i -ge $p) {
-        Write-Console ' ' -NoNewLine
-      } else {
-        Write-Console ([ProgressUtil]::_block) -f SlateBlue -NoNewLine
+    [ProgressUtil]::WriteProgressBar($percent, $update, $PBLength, $message, $Completed, [ProgressUtil]::data.ProgressBarcolor)
+  }
+  static [void] WriteProgressBar([int]$percent, [bool]$update, [int]$PBLength, [string]$message, [bool]$Completed, [string]$PBcolor) {
+    if ([ProgressUtil]::data.ShowProgress) {
+      [ValidateNotNull()][int]$PBLength = $PBLength; [ValidateNotNull()][int]$percent = $percent; $PmsgColor = [ProgressUtil]::data.ProgressMsgcolor
+      [ValidateNotNull()][bool]$update = $update; [ValidateNotNull()][string]$message = $message;
+      [ValidateScript( { return [bool][color]$_ })][string]$PmsgColor = $PmsgColor;
+      [ValidateScript( { return [bool][color]$_ })][string]$PBcolor = $PBcolor;
+      if ($update) { [Console]::Write(("`b" * [ConsoleWriter]::get_ConsoleWidth())) }
+      Write-Console $message -f $PmsgColor -NoNewLine
+      Write-Console " [" -f $PBcolor -NoNewLine
+      $p = [int](($percent / 100.0) * $PBLength + 0.5)
+      for ($i = 0; $i -lt $PBLength; $i++) {
+        if ($i -ge $p) {
+          Write-Console ' ' -NoNewLine
+        } else {
+          Write-Console ([ProgressUtil]::data.ProgressBlock) -f $PBcolor -NoNewLine
+        }
       }
+      Write-Console "] " -f $PBcolor -NoNewLine
+      Write-Console ("{0,3:##0}%" -f $percent) -f $PmsgColor -NoNewLine:(!$Completed)
     }
-    Write-Console ("] {0,3:##0}%" -f $percent) -f SlateBlue -NoNewLine:(!$Completed)
   }
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb) {
     return [ProgressUtil]::WaitJob($progressMsg, $sb, $null)
   }
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [System.Management.Automation.Job]$Job) {
-    [Console]::CursorVisible = $false;
-    [ProgressUtil]::frames = [ProgressUtil]::_twirl[0]
-    [int]$length = [ProgressUtil]::frames.Length;
+    return [ProgressUtil]::WaitJob($progressMsg, $Job, [ProgressUtil]::data.ProgressMsgcolor)
+  }
+  static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [System.Management.Automation.Job]$Job, [string]$PmsgColor) {
+    [Console]::CursorVisible = $false; [ValidateScript( { return [bool][color]$_ })][string]$PmsgColor = $PmsgColor
+    [ProgressUtil]::data.TwirlFrames = [ProgressUtil]::data.TwirlEmojis[0]; $PBcolor = [ProgressUtil]::data.ProgressBarcolor
+    [ValidateScript( { return [bool][color]$_ })][string]$PBcolor = $PBcolor
+    [int]$length = [ProgressUtil]::data.TwirlFrames.Length;
     $originalY = [Console]::CursorTop
     while ($Job.JobStateInfo.State -notin ('Completed', 'failed')) {
       for ($i = 0; $i -lt $length; $i++) {
-        [ProgressUtil]::frames.Foreach({ [Console]::Write("$progressMsg $($_[$i])") })
+        [ProgressUtil]::data.TwirlFrames.Foreach({
+            Write-Console "$progressMsg" -NoNewLine -f $PmsgColor
+            Write-Console " $($_[$i])" -NoNewLine -f $PBcolor
+          })
         [System.Threading.Thread]::Sleep(50)
-        [Console]::Write(("`b" * ($length + $progressMsg.Length)))
+        Write-Console ("`b" * ($length + $progressMsg.Length)) -NoNewLine -f $PmsgColor
         [Console]::CursorTop = $originalY
       }
     }
-    Write-Host "`b$progressMsg ... " -NoNewline -ForegroundColor Magenta
+    Write-Console "`b$progressMsg ... " -NoNewLine -f $PmsgColor
     [System.Management.Automation.Runspaces.RemotingErrorRecord[]]$Errors = $Job.ChildJobs.Where({
         $null -ne $_.Error
       }
@@ -2305,9 +2340,9 @@ class ProgressUtil {
       if ($null -ne $Errors) {
         $errormessages = $Errors.Exception.Message -join "`n"
       }
-      Write-Host "Completed with errors.`n`t$errormessages" -ForegroundColor Red
+      Write-Console "Completed with errors.`n`t$errormessages" -f Salmon
     } else {
-      Write-Host "Done" -ForegroundColor Green
+      Write-Console "Done" -f Green
     }
     [Console]::CursorVisible = $true;
     return $Job
@@ -2315,6 +2350,11 @@ class ProgressUtil {
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb, [Object[]]$ArgumentList) {
     $Job = ($null -ne $ArgumentList) ? (Start-ThreadJob -ScriptBlock $sb -ArgumentList $ArgumentList ) : (Start-ThreadJob -ScriptBlock $sb)
     return [ProgressUtil]::WaitJob($progressMsg, $Job)
+  }
+  static [void] ToggleShowProgress() {
+    # .DESCRIPTION
+    # The ShowProgress option respects $verbosepreference, this method enables you to take control of that and set/toggle it manualy.
+    [ProgressUtil]::data.Set("ShowProgress", [scriptblock]::Create(" return [bool]$([int]![ProgressUtil]::data.ShowProgress)"))
   }
 }
 
