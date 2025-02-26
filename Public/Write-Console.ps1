@@ -27,6 +27,7 @@ function Write-Console {
     [ValidateNotNullOrEmpty()]
     [string]$Text,
 
+    # foreground color name of the object you want to write.
     [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'Name')]
     [Alias('f')]
     [ArgumentCompleter({
@@ -39,19 +40,20 @@ function Write-Console {
           [System.Collections.IDictionary]$FakeBoundParameters
         )
         $CompletionResults = [System.Collections.Generic.List[System.Management.Automation.CompletionResult]]::new()
-        [color].GetMethods().Where({ $_.IsStatic -and $_.Name -like "Get_*" }).Name.Substring(4).Where({ $_.ToString() -like "$wordToComplete*" }) |
+        [ConsoleWriter]::Colors.Where({ $_ -like "$wordToComplete*" }) |
           ForEach-Object {
             $CompletionResults.Add([System.Management.Automation.CompletionResult]::new($_, $_, "ParameterValue", $_))
           }
         return $CompletionResults
-      })]
-    $ForegroundColor,
+      })][ValidateScript( { if ([ConsoleWriter]::Colors -contains $_) { return $true } else { throw [System.Management.Automation.ValidationMetadataException]::new("Please provide a valid color name. see [ConsoleWriter]::Colors for a list of valid colors") } })]
+    [string]$ForegroundColor = "LightGray",
 
-    # The foreground color of the Object. Defaults to white.
+    # The rgb foreground color of the Object. Defaults to LightGray.
     [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'Code')]
     [Alias('fr')]
-    [rgb]$Foreground = [rgb]::new(255, 255, 255),
+    [rgb]$Foreground = [rgb]::new(211, 211, 211),
 
+    # Not always needed, so defaults to transparent.
     [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'Name')]
     [Alias('b')]
     [ArgumentCompleter({
@@ -64,18 +66,18 @@ function Write-Console {
           [System.Collections.IDictionary]$FakeBoundParameters
         )
         $CompletionResults = [System.Collections.Generic.List[System.Management.Automation.CompletionResult]]::new()
-        [color].GetMethods().Where({ $_.IsStatic -and $_.Name -like "Get_*" }).Name.Substring(4).Where({ $_.ToString() -like "$wordToComplete*" }) |
+        [ConsoleWriter]::Colors.Where({ $_ -like "$wordToComplete*" }) |
           ForEach-Object {
             $CompletionResults.Add([System.Management.Automation.CompletionResult]::new($_, $_, "ParameterValue", $_))
           }
         return $CompletionResults
-      })]
-    $BackgroundColor,
+      })][ValidateScript( { if ([ConsoleWriter]::Colors -contains $_) { return $true } else { throw [System.Management.Automation.ValidationMetadataException]::new("Please provide a valid color name. see [ConsoleWriter]::Colors for a list of valid colors") } })]
+    [string]$BackgroundColor,
 
     # The background color of the Object. Defaults to transparent if not set.
     [Parameter(Mandatory = $false, Position = 2, ParameterSetName = 'Code')]
     [Alias('br')]
-    [rgb]$Background,
+    [rgb]$Background = [rgb]::new(0, 0, 0),
 
     # No newline after the Object.
     [Alias('nn')]
