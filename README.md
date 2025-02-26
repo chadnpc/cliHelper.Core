@@ -34,6 +34,13 @@ Import-Module cliHelper.core
 
 $art = Create-CliArt "https://pastebin.com/raw/p29UR385" -Taglines "Build. Ship. Repeat."; $art.Replace("x.y.z", "0.2.4");
 $art.Write(15, $false, $true)
+
+$RequestParams = @{
+  Uri    = 'https://jsonplaceholder.typicode.com/todos/1'
+  Method = 'GET'
+}
+$result = [ProgressUtil]::WaitJob("Making a request", { Param($rp) Start-Sleep -Seconds 2; Invoke-RestMethod @rp }, $RequestParams) | Receive-Job
+echo $result
 ```
 
 <!--

@@ -2226,7 +2226,7 @@ class ActivityLog : PsRecord {
 .EXAMPLE
   for ($i = 0; $i -le 100; $i++) { [ProgressUtil]::WriteProgressBar($i, "doing stuff") }
 .EXAMPLE
-  [progressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 });
+  [ProgressUtil]::WaitJob("waiting", { Start-Sleep -Seconds 3 });
 .EXAMPLE
   $j = [ProgressUtil]::WaitJob("Waiting", { Param($ob) Start-Sleep -Seconds 3; return $ob }, (Get-Process pwsh));
   $j | Receive-Job
@@ -2242,7 +2242,7 @@ class ActivityLog : PsRecord {
     Uri    = 'https://jsonplaceholder.typicode.com/todos/1'
     Method = 'GET'
   }
-  $result = [progressUtil]::WaitJob("Making a request", { Param($rp) Start-Sleep -Seconds 2; Invoke-RestMethod @rp }, $RequestParams) | Receive-Job
+  $result = [ProgressUtil]::WaitJob("Making a request", { Param($rp) Start-Sleep -Seconds 2; Invoke-RestMethod @rp }, $RequestParams) | Receive-Job
   echo $result
 
   userId id title              completed
@@ -2407,7 +2407,7 @@ class ThreadRunner {
     # .EXAMPLE
     # $result = [ThreadRunner]::Run("Making guid & some background stuff", { param([string]$str) Start-Sleep 3; return ($str | xconvert ToGuid) }, "some text")
     $a = $argumentlist ? $argumentlist : @()
-    $j = [progressUtil]::WaitJob($progressmsg, $command, $a)
+    $j = [ProgressUtil]::WaitJob($progressmsg, $command, $a)
     $e = [PSDataCollection[ErrorRecord]]::new(); $j.Error.ForEach({ $e.Add($_) })
     $r = $j | Receive-Job -ErrorVariable threadErrors; $j.Dispose()
     (Get-Variable threadErrors).Value.ForEach({ $e.Add($_) });

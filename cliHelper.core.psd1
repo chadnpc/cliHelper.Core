@@ -71,11 +71,15 @@
   PrivateData           = @{
     PSData = @{
       # Tags applied to this module. These help with module discovery in online galleries.
-      Tags         = 'convert', 'xconvert', 'cliHelper.core'
-      LicenseUri   = 'https://alain.mit-license.org/'
-      ProjectUri   = 'https://github.com/chadnpc/cliHelper.core'
-      IconUri      = 'https://github.com/user-attachments/assets/594f7b37-92f6-4ca3-9172-8c2a5a183aff'
-      ReleaseNotes = "
+      Tags                       = 'convert', 'xconvert', 'cliHelper.core'
+      LicenseUri                 = 'https://alain.mit-license.org/'
+      ProjectUri                 = 'https://github.com/chadnpc/cliHelper.core'
+      IconUri                    = 'https://github.com/user-attachments/assets/594f7b37-92f6-4ca3-9172-8c2a5a183aff'
+      RequireLicenseAcceptance   = $false
+      # External dependent modules of this module
+      ExternalModuleDependencies = @("cliHelper.errorman")
+      # Prerelease = ''
+      ReleaseNotes               = "
 <ReleaseNotes>
 "
     } # End of PSData hashtable
