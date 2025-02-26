@@ -1,20 +1,18 @@
 function Get-GistFiles {
-  <#
-    .SYNOPSIS
-        Get gist Files
-    .DESCRIPTION
-        A longer description of the function, its purpose, common use cases, etc.
-    .EXAMPLE
-        $Name   = "P0t4t0_ex.ps1"
-        $params = @{
-            UserName    = '6r1mh04x'
-            SecureToken = Read-Host -Prompt "Github Api Token" -AsSecureString
-            GistId      = '995856aa97ac3120cd8d92d2a6eac212'
-        }
-        $rawUrl = (Get-GistFiles @$params).Where({ $_.Name -eq $Name }).raw_url
+  # .SYNOPSIS
+  #     Get gist Files
+  # .DESCRIPTION
+  #     A longer description of the function, its purpose, common use cases, etc.
+  # .EXAMPLE
+  #     $Name   = "P0t4t0_ex.ps1"
+  #     $params = @{
+  #         UserName    = '6r1mh04x'
+  #         SecureToken = Read-Host -Prompt "Github Api Token" -AsSecureString
+  #         GistId      = '995856aa97ac3120cd8d92d2a6eac212'
+  #     }
+  #     $rawUrl = (Get-GistFiles @$params).Where({ $_.Name -eq $Name }).raw_url
 
-        Using this function to Fetch raw_url of a private gist
-    #>
+  #     Fetching the raw_url of a private gist
   [OutputType([GistFile[]])]
   [CmdletBinding(DefaultParameterSetName = 'ClearT')]
   param (

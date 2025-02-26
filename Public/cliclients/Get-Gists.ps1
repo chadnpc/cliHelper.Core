@@ -1,15 +1,13 @@
 function Get-Gists {
-  <#
-    .SYNOPSIS
-        Gets all gists for a user
-    .DESCRIPTION
-        A longer description of the function, its purpose, common use cases, etc.
-    .LINK
-        Specify a URI to a help page, this will show when Get-Help -Online is used.
-    .EXAMPLE
-        Get-Gists -UserName 'chadnpc' -SecureToken (Read-Host -Prompt "Github Api Token" -AsSecureString)
-        Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines
-    #>
+  # .SYNOPSIS
+  #     Gets all gists for a user
+  # .DESCRIPTION
+  #     A longer description of the function, its purpose, common use cases, etc.
+  # .LINK
+  #     Specify a URI to a help page, this will show when Get-Help -Online is used.
+  # .EXAMPLE
+  #     Get-Gists -UserName 'chadnpc' -SecureToken (Read-Host -Prompt "Github Api Token" -AsSecureString)
+  #     Explanation of the function or its result. You can include multiple examples with additional .EXAMPLE lines
   [OutputType([Gist[]])]
   [CmdletBinding(DefaultParameterSetName = 'ClearT')]
   param (
