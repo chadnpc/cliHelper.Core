@@ -19,7 +19,7 @@ using namespace System.Management.Automation.Runspaces
 
 #region    Classes
 #Requires -RunAsAdministrator
-#Requires -Modules cliHelper.xconvert, cliHelper.xcrypt
+#Requires -Modules cliHelper.xconvert, cliHelper.errorman, cliHelper.xcrypt
 #Requires -Psedition Core
 
 enum HostOS {
@@ -1192,7 +1192,6 @@ class FontMan {
   }
 }
 
-
 class ConsoleWriter : System.IO.TextWriter {
   static hidden [string] $leadPreffix
   static hidden [string[]] $Colors = [ConsoleWriter]::get_ColorNames()
@@ -2354,11 +2353,70 @@ class StackTracer {
   }
 }
 
+class ThreadRunner {
+  static [string] $Module = "clihelper.core"
+  static [ErrorLog] $ErrorLog = [ErrorLog]::New()
+
+  static [PSDataCollection[PsObject]] Run([string]$progressmsg, [scriptblock]$command, [object[]]$argumentlist) {
+    return [ThreadRunner]::Run($progressmsg, $command, [string]::Empty, $argumentlist, $false, ((Get-Variable 'VerbosePreference' -ValueOnly) -eq 'Continue'))
+  }
+  static [PSDataCollection[PsObject]] Run([string]$progressmsg, [scriptblock]$command, [string]$MoreInfo, [object[]]$argumentlist) {
+    return [ThreadRunner]::Run($progressmsg, $command, $MoreInfo, $argumentlist, $false, ((Get-Variable 'VerbosePreference' -ValueOnly) -eq 'Continue'))
+  }
+  static [PSDataCollection[PsObject]] Run([string]$progressmsg, [scriptblock]$command, [string]$MoreInfo, [object[]]$argumentlist, [bool]$throwOnFail, [bool]$verbose) {
+    # .EXAMPLE
+    # $result = [ThreadRunner]::Run("Making guid & some background stuff", { param([string]$str) Start-Sleep 3; return ($str | xconvert ToGuid) }, "some text")
+    $a = $argumentlist ? $argumentlist : @()
+    $j = [progressUtil]::WaitJob($progressmsg, $command, $a)
+    $e = [PSDataCollection[ErrorRecord]]::new(); $j.Error.ForEach({ $e.Add($_) })
+    $r = $j | Receive-Job -ErrorVariable threadErrors; $j.Dispose()
+    (Get-Variable threadErrors).Value.ForEach({ $e.Add($_) });
+    [ThreadRunner]::LogErrors($e, [ThreadRunner]::GetErrorMetadata($e, $MoreInfo), $throwOnFail)
+    if ($verbose) { ($r | Out-String) + ' ' | Write-Console -f DarkSlateGray }
+    if ($throwOnFail -and $e.Count -gt 0) { throw $e }
+    return $r
+  }
+  static [void] LogErrors([PSDataCollection[ErrorRecord]]$ErrorRecords) {
+    [ThreadRunner]::LogErrors($ErrorRecords, [string]::Empty)
+  }
+  static [void] LogErrors([PSDataCollection[ErrorRecord]]$ErrorRecords, [string]$MoreInfo) {
+    [ThreadRunner]::LogErrors($ErrorRecords, [ThreadRunner]::GetErrorMetadata($ErrorRecords, $MoreInfo))
+  }
+  static [void] LogErrors([PSDataCollection[ErrorRecord]]$ErrorRecords, [ErrorMetadata]$metadata) {
+    [ThreadRunner]::LogErrors($ErrorRecords, $metadata, $false)
+  }
+  static [void] LogErrors([PSDataCollection[ErrorRecord]]$ErrorRecords, [ErrorMetadata]$metadata, [bool]$throw) {
+    if ($ErrorRecords.count -eq 0) { return } # log/record the error
+    ![ThreadRunner]::ErrorLog ? ([ThreadRunner]::ErrorLog = [ErrorLog]::New()) : $null;
+    $ErrorRecords.ForEach({
+        $metadata.IsPrinted = !$throw
+        $_.PsObject.Properties.Add([PSNoteProperty]::New("Metadata", $metadata))
+        [void][ThreadRunner]::ErrorLog.Add($_)
+      }
+    )
+    # "simple printf" or Write-TerminatingError
+    $throw ? (throw $ErrorRecords) : $($ErrorRecords | Out-String | Write-Console -f LightCoral)
+  }
+  static [ErrorMetadata] GetErrorMetadata([PSDataCollection[ErrorRecord]]$ErrorRecords) {
+    return [ThreadRunner]::GetErrorMetadata($ErrorRecords, [string]::Empty)
+  }
+  static [ErrorMetadata] GetErrorMetadata([PSDataCollection[ErrorRecord]]$ErrorRecords, [string]$MoreInfo) {
+    return [ErrorMetadata]@{
+      Timestamp      = [DateTime]::Now
+      User           = $env:USER
+      Module         = [ThreadRunner]::Module
+      Severity       = 1
+      StackTrace     = (($ErrorRecords.ScriptStackTrace | Out-String) + ' ').TrimEnd()
+      AdditionalInfo = $MoreInfo + (($ErrorRecords.InvocationInfo.PositionMessage | Out-String) + ' ').TrimEnd()
+    }
+  }
+}
+
 <#
 .SYNOPSIS
   PsRunner : Main class of the module
 .DESCRIPTION
-  Provides simple multithreading implementation in powerhsell
+  Provides simple powerhsell multithreading implementation to run multible jobs in parallel.
 .NOTES
   Author  : Alain Herve
   Created : <release_date>
@@ -2391,7 +2449,7 @@ class StackTracer {
  $ps.EndInvoke($h)
 #>
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '')]
-class PsRunner {
+class PsRunner : ThreadRunner {
   hidden [int] $_MinThreads = 2
   hidden [int] $_MaxThreads = [PsRunner]::GetThreadCount()
   static [AsyncResult] $AsyncResult = @()
@@ -2785,7 +2843,7 @@ $typestoExport = @(
   [NetworkManager], [InstallRequirements], [clistyle], [HostOS],
   [Requirement], [RGB], [color], [ProgressUtil], [ConsoleReader], [ConsoleWriter],
   [InstallException], [InstallFailedException], [Activity], [AsyncResult], [FontMan],
-  [StackTracer], [ShellConfig], [dotProfile], [PsRunner], [PsRecord], [cli], [cliart], [ActivityLog]
+  [StackTracer], [ShellConfig], [dotProfile], [PsRunner], [ThreadRunner], [PsRecord], [cli], [cliart], [ActivityLog]
 )
 $TypeAcceleratorsClass = [PsObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
 foreach ($Type in $typestoExport) {
