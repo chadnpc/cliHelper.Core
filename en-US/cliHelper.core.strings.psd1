@@ -1,10 +1,10 @@
 
 @{
   ModuleName    = 'cliHelper.core'
-  ModuleVersion = [version]'0.2.7'
+  ModuleVersion = [version]'0.2.8'
   ReleaseNotes  = '# Release Notes
 
-## Version _0.2.7_
+## Version _0.2.8_
 
 ### changelog
 - Optimised Write-Console and others.
