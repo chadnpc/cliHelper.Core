@@ -55,6 +55,7 @@ class Requirement {
   [version] $Version
   [string] $Description
   [string] $InstallScript
+  hidden [PSDataCollection[PsObject]]$Result
 
   Requirement() {}
   Requirement([array]$arr) {
@@ -88,17 +89,18 @@ class Requirement {
     return $this.Resolve($false, $false)
   }
   [bool] Resolve([switch]$Force, [switch]$What_If) {
-    $is_resolved = $true
+    $is_resolved = $true; $this.Result = [PSDataCollection[PsObject]]::new()
+    $v = [ProgressUtil]::data.ShowProgress
     if (!$this.IsInstalled() -or $Force.IsPresent) {
-      Write-Console "[Resolve requrement] $($this.Name) " -f Green -NoNewLine
-      if ($this.Description) {
-        Write-Console "($($this.Description)) " -f BlueViolet -NoNewLine
+      $v ? (Write-Console "`n[Resolve requrement] $($this.Name) " -f DarkKhaki -NoNewLine) : $null
+      if ([string]::IsNullOrWhiteSpace($this.Description)) {
+        $v ? (Write-Console "($($this.Description)) " -f Wheat -NoNewLine) : $null
       }
-      Write-Console "$($this.Version) " -f Green
+      $v ? (Write-Console "$($this.Version) " -f Green) : $null
       if ($What_If.IsPresent) {
-        Write-Console "Would install: $($this.Name)" -f Yellow
+        $v ? (Write-Console "Would install: $($this.Name)" -f Yellow) : $null
       } else {
-        $null = $this.InstallScript | Invoke-Expression
+        $this.Result += $this.InstallScript | Invoke-Expression
       }
       $is_resolved = $?
     }
@@ -1126,6 +1128,7 @@ class FontMan {
     $filePath = $fontFile.FullName; if (![IO.Path]::Exists($filePath)) {
       throw [System.IO.FileNotFoundException]::new("File Not found!", "$filePath")
     }
+    $v = [ProgressUtil]::data.ShowProgress
     try {
       [string]$filePath = (Resolve-Path $filePath).path
       [string]$fileDir = Split-Path $filePath
@@ -1144,32 +1147,32 @@ class FontMan {
         $fontName = $fileBaseName
       }
       if ([IO.File]::Exists([IO.Path]::Combine($env:windir, 'Fonts', $fontFile.Name))) {
-        Write-Verbose "Font '$fontName' already exists!"
+        $v ? (Write-Console "Font '$fontName' already exists!" -f Wheat) : $null
       }
-      Write-Verbose "Copying font: $fontName"
+      $v ? (Write-Console "Copying font: $fontName" -f DarkKhaki) : $null
       Copy-Item $filePath -Destination ([FontMan]::FontFolders[0]) -Force
       if (!(Get-ItemProperty -Name $fontName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -ErrorAction SilentlyContinue)) {
-        Write-Verbose "Registering font: $fontName"
+        $v ? (Write-Console "Registering font: $fontName" -f DarkKhaki) : $null
         New-ItemProperty -Name $fontName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -PropertyType string -Value $fontFile.Name -Force -ErrorAction SilentlyContinue | Out-Null
       } else {
-        Write-Warning "Font already registered: $fontName"
+        $v ? (Write-Console "Font already registered: $fontName" -f Wheat) : $null
       }
       [System.Runtime.Interopservices.Marshal]::ReleaseComObject($shell) | Out-Null
       $retVal = [FontMan].FontRes32::AddFont([IO.Path]::Combine([FontMan]::FontFolders[0], $fileName))
       if ($retVal -eq 0) {
-        Write-Host "Font `'$($filePath)`'`' installation failed" -ForegroundColor Red
+        $v ? (Write-Console "Font `'$($filePath)`' installation failed" -f Red) : $null
         [console]::WriteLine()
         return 1
       } else {
-        Write-Host "Font `'$($filePath)`' installed successfully" -ForegroundColor Green
+        $v ? (Write-Console "Font `'$($filePath)`' installed successfully" -f Green) : $null
         [console]::WriteLine()
         Set-ItemProperty -Path "$([FontMan]::fontRegistryPath)" -Name "$($fontName)$([FontMan]::FontFileTypes.item($fileExt))" -Value "$($fileName)" -type STRING
         return 0
       }
     } catch {
-      Write-Host "An error occured installing `'$($filePath)`'" -ForegroundColor Red
+      $v ? (Write-Console "An error occured installing `'$($filePath)`'" -f Red) : $null
       [console]::WriteLine()
-      Write-Verbose "$($error[0].ToString())"
+      $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
       [console]::WriteLine()
       $error.clear()
       return 1
@@ -1182,12 +1185,13 @@ class FontMan {
     $filePath = $fontFile.FullName; if (![IO.Path]::Exists($filePath)) {
       throw [System.IO.FileNotFoundException]::new("File Not found!", "$filePath")
     }
+    $v = [ProgressUtil]::data.ShowProgress
     $fontFinalPath = [IO.Path]::Combine([FontMan]::FontFolders[0], $filePath)
     try {
       $retVal = [FontMan].FontRes32::RemoveFont($fontFinalPath)
       $fontName = [FontMan]::GetFontName($fontFile)
       if ($retVal -eq 0) {
-        Write-Host "Font `'$filePath`' removal failed" -ForegroundColor Red
+        $v ? (Write-Console "Font `'$filePath`' removal failed" -f Red) : $null
         [console]::WriteLine()
         return 1
       } else {
@@ -1207,35 +1211,36 @@ class FontMan {
             }
           }
         }
-        Write-Verbose "Font: $fontRegistryvaluename"
+        $v ? (Write-Console "Font: $fontRegistryvaluename" -f DarkKhaki) : $null
         if ($fontRegistryvaluename -ne "") {
           Remove-ItemProperty -Path ([FontMan]::fontRegistryPath) -Name $fontRegistryvaluename
         } else {
-          Write-Host "Font $fontName not registered!" -ForegroundColor Red
+          $v ? (Write-Console "Font $fontName not registered!" -f Red) : $null
         }
 
         if ([IO.Path]::Exists($fontFinalPath)) {
-          Write-Verbose "Removing font: $fontFile"
+          $v ? (Write-Console "Removing font: $fontFile" -f DarkKhaki) : $null
           Remove-Item $fontFinalPath -Force
         } else {
-          Write-Verbose "Font does not exist: $fontFile"
+          $v ? (Write-Console "Font does not exist: $fontFile" -f Wheat) : $null
         }
 
         if ($null -ne $error[0]) {
-          Write-Verbose "An error occured removing $`'$filePath`'"
+          $v ? (Write-Console "An error occured removing $`'$filePath`'" -f Red) : $null
           [console]::WriteLine()
-          Write-Verbose "$($error[0].ToString())"
+          $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
+          [console]::WriteLine()
           $error.clear()
         } else {
-          Write-Verbose "Font `'$filePath`' removed successfully"
+          $v ? (Write-Console "Font `'$filePath`' removed successfully" -f Green) : $null
           [console]::WriteLine()
         }
         return 0
       }
     } catch {
-      Write-Host "An error occured removing `'$filePath`'" -ForegroundColor Red
+      $v ? (Write-Console "An error occured removing `'$filePath`'" -f Red) : $null
       [console]::WriteLine()
-      Write-Verbose "$($error[0].ToString())"
+      $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
       [console]::WriteLine()
       $error.clear()
       return 1
@@ -1444,9 +1449,10 @@ class clistyle : PsRecord {
     $this.Initialize(@(), $false)
   }
   [void] Initialize([string[]]$DependencyModules, [bool]$force) {
-    Write-Verbose '[clistyle] Set variable defaults'
+    $v = [ProgressUtil]::data.ShowProgress
+    $v ? (Write-Console '[clistyle] Set variable defaults' -f DarkKhaki) : $null
     $this.Set_Defaults()
-    Write-Verbose '[clistyle] Resolving Requirements ... (a one-time process)'
+    $v ? (Write-Console '[clistyle] Resolving Requirements ... (a one-time process)' -f DarkKhaki) : $null
     # Inspired by: https://dev.to/ansonh/customize-beautify-your-windows-terminal-2022-edition-541l
     if ($null -eq (Get-PSRepository -Name PSGallery -ErrorAction Ignore)) {
       throw 'PSRepository named PSGallery was Not found!'
@@ -1460,7 +1466,7 @@ class clistyle : PsRecord {
       } elseif ($PackageProviderNames -notcontains $name) {
         Install-PackageProvider $name -Force
       } else {
-        Write-Verbose "PackageProvider '$name' is already Installed."
+        $v ? (Write-Console "PackageProvider '$name' is already Installed." -f Wheat) : $null
       }
     }
     # Install requied modules: # we could use Install-Module -Name $_ but it fails sometimes
@@ -1486,7 +1492,7 @@ class clistyle : PsRecord {
     # RESET current exit code:
     $this.CurrExitCode = $true
 
-    Write-Verbose '[clistyle] Load configuration settings ...'
+    $v ? (Write-Console '[clistyle] Load configuration settings ...' -f DarkKhaki) : $null
     $this.LoadConfiguration()
 
     Set-Variable -Name Colors -Value $($this.colors) -Scope Global -Visibility Public -Option AllScope
@@ -1498,12 +1504,12 @@ class clistyle : PsRecord {
         # Invoke-Command -ScriptBlock $Load_Profile_Functions
         $this.CurrExitCode = $? -and $($this.Create_Prompt_Function())
       } else {
-        Write-Debug "[clistyle] is already Initialized, Skipping ..."
+        $v ? (Write-Console "[clistyle] is already Initialized, Skipping ..." -f Wheat) : $null
       }
     }
     [void]$this.GetPsProfile() # create the $profile file if it does not exist
     $this.Set_TerminalUI()
-    Write-Debug -Message "[clistyle] Displaying a welcome message/MOTD ..."
+    $v ? (Write-Console "[clistyle] Displaying a welcome message/MOTD ..." -f DarkKhaki) : $null
     $this.Write_Term_Ascii()
   }
   [bool] IsInitialised() {
@@ -1576,11 +1582,12 @@ class clistyle : PsRecord {
   hidden [void] InstallNerdFont([string]$FontName) {
     #Requires -Version 3.0
     [ValidateNotNullorEmpty()][string]$FontName = $FontName
+    $v = [ProgressUtil]::data.ShowProgress
     if ([FontMan]::GetInstalledFonts().Contains("$FontName")) {
-      Write-Verbose "[clistyle] Font '$FontName' is already installed!"
+      $v ? (Write-Console "[clistyle] Font '$FontName' is already installed!" -f Wheat) : $null
       return
     }
-    Write-Host "Install required Font:  ($FontName)" -ForegroundColor Magenta
+    $v ? (Write-Console "Install required Font:  ($FontName)" -f Magenta) : $null
     [IO.DirectoryInfo]$FiraCodeExpand = [IO.Path]::Combine($env:temp, 'FiraCodeExpand')
     if (![System.IO.Directory]::Exists($FiraCodeExpand.FullName)) {
       $fczip = [IO.FileInfo][IO.Path]::Combine($env:temp, 'FiraCode.zip')
@@ -1659,21 +1666,21 @@ class clistyle : PsRecord {
   }
   [void] InstallOhMyPosh([bool]$AllUsers, [bool]$force) {
     $ompath = Get-Variable OH_MY_POSH_PATH -Scope Global -ValueOnly -ErrorAction Ignore
-    if ($null -eq $ompath) { $this.Set_Defaults() }
+    if ($null -eq $ompath) { $this.Set_Defaults() }; $v = [ProgressUtil]::data.ShowProgress
     $ompdir = [IO.DirectoryInfo]::new((Get-Variable OH_MY_POSH_PATH -Scope Global -ValueOnly))
     if (!$ompdir.Exists) { [void]$this.Create_Directory($ompdir.FullName) }
     if (!$force -and [bool](Get-Command oh-my-posh -Type Application -ErrorAction Ignore)) {
-      Write-Verbose "oh-my-posh is already Installed; moing on ..."
+      $v ? (Write-Console "oh-my-posh is already Installed; moing on ..." -f Wheat) : $null
       return
     }
     # begin installation
-    Write-Host "Install OhMyPosh" -ForegroundColor Magenta
+    $v ? (Write-Console "Install OhMyPosh" -f Magenta) : $null
     $installer = ''; $installInstructions = "`nHey friend`n`nThis installer is only available for Windows.`nIf you're looking for installation instructions for your operating system,`nplease visit the following link:`n"
     $Host_OS = $this.HostOS.ToString()
     if ($Host_OS -eq "MacOS") {
-      Write-Host "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/macos`n"
+      $v ? (Write-Console "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/macos`n" -f Wheat) : $null
     } elseif ($Host_OS -eq "Linux") {
-      Write-Host "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/linux"
+      $v ? (Write-Console "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/linux" -f Wheat) : $null
     } elseif ($Host_OS -eq "Windows") {
       $arch = (Get-CimInstance -Class Win32_Processor -Property Architecture).Architecture | Select-Object -First 1
       switch ($arch) {
@@ -1696,7 +1703,7 @@ class clistyle : PsRecord {
                     12 = 'Surface'
                 }.$arch)) is not available.`n"
       }
-      Write-Host "Downloading $installer..."
+      $v ? (Write-Console "Downloading $installer..." -f DarkKhaki) : $null
       $omp_installer = [IO.FileInfo]::new("aux"); $ret_count = 0
       do {
         $omp_installer = [IO.FileInfo]::new([IO.Path]::Combine($env:TEMP, ([System.IO.Path]::GetRandomFileName() -replace '\.\w+$', '.exe'))); $ret_count++
@@ -1704,7 +1711,7 @@ class clistyle : PsRecord {
       $url = "https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/$installer"
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       Invoke-WebRequest -OutFile $omp_installer.FullName -Uri $url
-      Write-Host 'Running installer...'
+      $v ? (Write-Console 'Running installer...' -f DarkKhaki) : $null
       $installMode = "/CURRENTUSER"
       if ($AllUsers) {
         $installMode = "/ALLUSERS"
@@ -2085,7 +2092,7 @@ class clistyle : PsRecord {
   }
   hidden [System.IO.DirectoryInfo] Create_Directory([string]$Path) {
     $nF = @(); $d = [System.IO.DirectoryInfo]::New((Get-Variable ExecutionContext).Value.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path))
-    Write-Verbose "Creating Directory '$($d.FullName)' ..."
+    ([ProgressUtil]::data.ShowProgress) ? (Write-Console "Creating Directory '$($d.FullName)' ..." -f DarkKhaki) : $null
     while (!$d.Exists) { $nF += $d; $d = $d.Parent }
     [Array]::Reverse($nF); $nF | ForEach-Object { $_.Create() }
     return $d
