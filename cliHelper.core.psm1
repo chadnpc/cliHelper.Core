@@ -79,9 +79,11 @@ class Requirement {
     try {
       Get-Command $this.Name -Type Application
       return $?
-    } catch [CommandNotFoundException] {
+    }
+    catch [CommandNotFoundException] {
       return $false
-    } catch {
+    }
+    catch {
       throw [InstallException]::new("Failed to check if $($this.Name) is installed", $_.Exception)
     }
   }
@@ -99,7 +101,8 @@ class Requirement {
       $v ? (Write-Console "$($this.Version) " -f Green) : $null
       if ($What_If.IsPresent) {
         $v ? (Write-Console "Would install: $($this.Name)" -f Yellow) : $null
-      } else {
+      }
+      else {
         $this.Result += $this.InstallScript | Invoke-Expression
       }
       $is_resolved = $?
@@ -235,10 +238,12 @@ class PsRecord {
         $nval = $table[$key]; [string]$val_type_name = ($null -ne $nval) ? $nval.GetType().Name : [string]::Empty
         if ($val_type_name -eq 'ScriptBlock') {
           $this.PsObject.Properties.Add([PsScriptProperty]::new($key, $nval, [scriptblock]::Create("throw [SetValueException]::new('$key is read-only')")))
-        } else {
+        }
+        else {
           $this | Add-Member -MemberType NoteProperty -Name $key -Value $nval
         }
-      } else {
+      }
+      else {
         $this.$key = $table[$key]
       }
     }
@@ -250,7 +255,8 @@ class PsRecord {
     [ValidateNotNullOrEmpty()][string]$key = $key
     if (!$this.HasProperty($key)) {
       $htab = [hashtable]::new(); $htab.Add($key, $value); $this.Add($htab)
-    } else {
+    }
+    else {
       Write-Warning "Config.Add() Skipped $Key. Key already exists."
     }
   }
@@ -267,7 +273,8 @@ class PsRecord {
       $nval = $table[$key]; [string]$val_type_name = ($null -ne $nval) ? $nval.GetType().Name : [string]::Empty
       if ($val_type_name -eq 'ScriptBlock') {
         $this.PsObject.Properties.Add([PsScriptProperty]::new($key, $nval, [scriptblock]::Create("throw [SetValueException]::new('$key is read-only')") ))
-      } else {
+      }
+      else {
         $this | Add-Member -MemberType NoteProperty -Name $key -Value $nval -Force
       }
     }
@@ -408,10 +415,12 @@ class PsRecord {
       $0 = $shortnr.Invoke("{'$($b.Keys)' = '$($b.values.ToString())'}", 40)
       $1 = $shortnr.Invoke("{'$($e.Keys)' = '$($e.values.ToString())'}", 40)
       $s = "@($0 ... $1)"
-    } elseif ($r.count -eq 1) {
+    }
+    elseif ($r.count -eq 1) {
       $0 = $shortnr.Invoke("{'$($r[0].Keys)' = '$($r[0].values.ToString())'}", 40)
       $s = "@($0)"
-    } else {
+    }
+    else {
       $s = '@()'
     }
     return $s
@@ -461,18 +470,22 @@ class RGB {
 
     if ($delta -eq 0) {
       $hue = 0
-    } elseif ($max -eq $redPercent) {
+    }
+    elseif ($max -eq $redPercent) {
       $hue = 60 * ((($greenPercent - $bluePercent) / $delta) % 6)
-    } elseif ($max -eq $greenPercent) {
+    }
+    elseif ($max -eq $greenPercent) {
       $hue = 60 * ((($bluePercent - $redPercent) / $delta) + 2)
-    } elseif ($max -eq $bluePercent) {
+    }
+    elseif ($max -eq $bluePercent) {
       $hue = 60 * ((($redPercent - $greenPercent) / $delta) + 4)
     }
     if ($hue -lt 0) { $hue = 360 + $hue }
 
     if ($max -eq 0) {
       $saturation = 0
-    } else {
+    }
+    else {
       $saturation = $delta / $max * 100
     }
     $value = $max * 100
@@ -487,7 +500,8 @@ class RGB {
       $lightnessPercent,
       $lightnessPercent,
       $lightnessPercent
-    } else {
+    }
+    else {
       $q = ($lightnessPercent -lt 0.5) ? ($lightnessPercent * (1 + $saturationPercent)) : ($lightnessPercent + $saturationPercent - ($lightnessPercent * $saturationPercent))
       $p = 2 * $lightnessPercent - $q
 
@@ -777,7 +791,7 @@ class dotProfile {
       if ([dotProfile]::config.AutoUpdate) {
         # Make $profile Auto update itself to the latest version gist
         Invoke-Command -ScriptBlock {
-          While ($true) {
+          while ($true) {
             Start-Sleep 3 #seconds
             #Run this script, change the text below, and save this script
             #and the PowerShell window stays open and starts running the new version without a hitch
@@ -796,10 +810,12 @@ class dotProfile {
           # Invoke-Command -ScriptBlock $Load_Profile_Functions
           $IsSuccess = $? -and $([dotProfile]::SetHostUI())
           $IsSuccess = $? -and $([dotProfile]::Set_PowerlinePrompt())
-        } else {
+        }
+        else {
           Write-Debug "dotProfile is already Initialized, Skipping This step ..."
         }
-      } else {
+      }
+      else {
         # Invoke-Command -ScriptBlock $Load_Profile_Functions
         $IsSuccess = $? -and $([dotProfile]::SetHostUI())
         $IsSuccess = $? -and $([dotProfile]::Set_PowerlinePrompt())
@@ -810,11 +826,13 @@ class dotProfile {
         Write-Console $([dotProfile]::Banner) -ForegroundColor SlateBlue -BackgroundColor Black;
         Write-Host ''
       }
-    } catch {
+    }
+    catch {
       $IsSuccess = $false
       $ErrorRecord = [System.Management.Automation.ErrorRecord]$_
       # Write-Log -ErrorRecord $_
-    } finally {
+    }
+    finally {
       $Result = [PSCustomObject]@{
         Output      = $Output
         IsSuccess   = $IsSuccess
@@ -866,10 +884,12 @@ class dotProfile {
     try {
       $null = New-Item -Path function:prompt -Value $([dotProfile]::config.PSObject.Methods['ShowPrompt']) -Force
       $IsSuccess = $IsSuccess -and $?
-    } catch {
+    }
+    catch {
       $IsSuccess = $false
       # Write-Log -ErrorRecord $_
-    } finally {
+    }
+    finally {
       Set-Variable -Name dotProfileIsLoaded -Value $IsSuccess -Visibility Public -Scope Global;
     }
     return $IsSuccess
@@ -902,7 +922,8 @@ class dotProfile {
     try {
       $location = "$((Get-Variable ExecutionContext -Scope local).SessionState.Path.CurrentLocation.Path)";
       $shortLoc = Get-ShortPath $location -TruncateChar $dt;
-    } catch {
+    }
+    catch {
       Set-Location ..
     }
     $IsGitRepo = if ([bool]$(try { Test-Path .git -ErrorAction silentlyContinue }catch { $false })) { $true }else { $false }
@@ -915,18 +936,21 @@ class dotProfile {
       Write-Host -NoNewline "$b2 ";
       if ($location -eq "$env:UserProfile") {
         Write-Host $Home_Indic -NoNewline -ForegroundColor DarkCyan;
-      } elseif ($location.Contains("$env:UserProfile")) {
+      }
+      elseif ($location.Contains("$env:UserProfile")) {
         $location = $($location.replace("$env:UserProfile", "$swiglyChar"));
         if ($location.Length -gt 25) {
           $location = $(Get-ShortPath $location -TruncateChar $dt)
         }
         Write-Host $location -NoNewline -ForegroundColor DarkCyan
-      } else {
+      }
+      else {
         Write-Host $shortLoc -NoNewline -ForegroundColor DarkCyan
       }
       if ($IsGitRepo) {
         Write-Host $(Write-VcsStatus)
-      } else {
+      }
+      else {
         # No alternate display, just send a newline
         Write-Host ''
       }
@@ -935,13 +959,15 @@ class dotProfile {
       # ' ' * $($Host.UI.RawUI.WindowSize.Width - 19) + 'Time______goes_Here'
       # $dt = [datetime]::Now; $day = $dt.ToLongDateString().split(',')[1].trim()
       # $CurrentTime = "$day, $($dt.Year) $($dt.Hour):$($dt.Minute)"
-    } catch {
+    }
+    catch {
       <#Do this if a terminating exception happens#>
       # if ($_.Exception.WasThrownFromThrowStatement) {
       #     [System.Management.Automation.ErrorRecord]$_ | Write-Log $LogFile
       # }
       $(Get-Variable Host -Scope local).UI.WriteErrorLine("[PromptError] [$($_.FullyQualifiedErrorId)] $($_.Exception.Message) # see the Log File : `$LogFile $nl")
-    } finally {
+    }
+    finally {
       #Do this after the try block regardless of whether an exception occurred or not#
       $LASTEXITCODE = $realLASTEXITCODE
     }
@@ -951,7 +977,7 @@ class dotProfile {
 
 #endregion Config_classes
 
-Class InstallRequirements {
+class InstallRequirements {
   [Requirement[]] $list = @()
   [bool] $resolved = $false
   [string] $jsonPath = [IO.Path]::Combine($(Resolve-Path .).Path, 'requirements.json')
@@ -1004,7 +1030,8 @@ class cli {
     $Response = Read-Host -Prompt ($Prompt + " [$Default]")
     if ('' -eq $response) {
       return $Default
-    } else {
+    }
+    else {
       return $Response
     }
   }
@@ -1046,7 +1073,7 @@ class cliart {
       ($s | xcrypt IsValidUrl) { Get-Item (Start-DownloadWithRetry -Uri $s -Message "download cliart" -Verbose:$use_verbose).FullName; break }
       ($s | xcrypt IsBase64String) { $s; break }
       ([IO.Path]::IsPathFullyQualified($s)) { (Get-Item $s); break }
-      Default {
+      default {
         throw [ArgumentException]::new('Invalid input string. [cliart]::Create() requires a valid url, base64 string or path.')
       }
     }
@@ -1154,7 +1181,8 @@ class FontMan {
       if (!(Get-ItemProperty -Name $fontName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -ErrorAction SilentlyContinue)) {
         $v ? (Write-Console "Registering font: $fontName" -f DarkKhaki) : $null
         New-ItemProperty -Name $fontName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -PropertyType string -Value $fontFile.Name -Force -ErrorAction SilentlyContinue | Out-Null
-      } else {
+      }
+      else {
         $v ? (Write-Console "Font already registered: $fontName" -f Wheat) : $null
       }
       [System.Runtime.Interopservices.Marshal]::ReleaseComObject($shell) | Out-Null
@@ -1163,13 +1191,15 @@ class FontMan {
         $v ? (Write-Console "Font `'$($filePath)`' installation failed" -f Red) : $null
         [console]::WriteLine()
         return 1
-      } else {
+      }
+      else {
         $v ? (Write-Console "Font `'$($filePath)`' installed successfully" -f Green) : $null
         [console]::WriteLine()
         Set-ItemProperty -Path "$([FontMan]::fontRegistryPath)" -Name "$($fontName)$([FontMan]::FontFileTypes.item($fileExt))" -Value "$($fileName)" -type STRING
         return 0
       }
-    } catch {
+    }
+    catch {
       $v ? (Write-Console "An error occured installing `'$($filePath)`'" -f Red) : $null
       [console]::WriteLine()
       $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
@@ -1194,7 +1224,8 @@ class FontMan {
         $v ? (Write-Console "Font `'$filePath`' removal failed" -f Red) : $null
         [console]::WriteLine()
         return 1
-      } else {
+      }
+      else {
         # Get Registry StringName From Value :
         [string]$keyPath = [FontMan]::fontRegistryPath;
         $fontRegistryvaluename = Invoke-Command -ScriptBlock {
@@ -1214,14 +1245,16 @@ class FontMan {
         $v ? (Write-Console "Font: $fontRegistryvaluename" -f DarkKhaki) : $null
         if ($fontRegistryvaluename -ne "") {
           Remove-ItemProperty -Path ([FontMan]::fontRegistryPath) -Name $fontRegistryvaluename
-        } else {
+        }
+        else {
           $v ? (Write-Console "Font $fontName not registered!" -f Red) : $null
         }
 
         if ([IO.Path]::Exists($fontFinalPath)) {
           $v ? (Write-Console "Removing font: $fontFile" -f DarkKhaki) : $null
           Remove-Item $fontFinalPath -Force
-        } else {
+        }
+        else {
           $v ? (Write-Console "Font does not exist: $fontFile" -f Wheat) : $null
         }
 
@@ -1231,13 +1264,15 @@ class FontMan {
           $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
           [console]::WriteLine()
           $error.clear()
-        } else {
+        }
+        else {
           $v ? (Write-Console "Font `'$filePath`' removed successfully" -f Green) : $null
           [console]::WriteLine()
         }
         return 0
       }
-    } catch {
+    }
+    catch {
       $v ? (Write-Console "An error occured removing `'$filePath`'" -f Red) : $null
       [console]::WriteLine()
       $v ? (Write-Console "$($error[0].ToString())" -f Red) : $null
@@ -1279,7 +1314,8 @@ class FontMan {
     $paths = $session.Path.GetResolvedPSPathFromPSPath($Path);
     if ($paths.Count -gt 1) {
       throw [System.IO.IOException]::new([string]::Format([cultureinfo]::InvariantCulture, "Path {0} is ambiguous", $Path))
-    } elseif ($paths.Count -lt 1) {
+    }
+    elseif ($paths.Count -lt 1) {
       throw [System.IO.IOException]::new([string]::Format([cultureinfo]::InvariantCulture, "Path {0} not Found", $Path))
     }
     return $paths[0].Path
@@ -1345,7 +1381,8 @@ class ConsoleWriter : System.IO.TextWriter {
   static [string] write([string]$text, [string]$Preffix, [int]$Speed, [int]$Duration, [ConsoleColor]$color, [bool]$Animate, [bool]$AddPreffix, [scriptblock]$ValidateScript) {
     if ($null -ne $ValidateScript) {
       [void]$ValidateScript.Invoke($text)
-    } elseif ([string]::IsNullOrWhiteSpace($text)) {
+    }
+    elseif ([string]::IsNullOrWhiteSpace($text)) {
       return $text
     }
     [int]$length = $text.Length; $delay = 0
@@ -1361,7 +1398,8 @@ class ConsoleWriter : System.IO.TextWriter {
         [void][Console]::Write($text[$i]);
         Start-Sleep -Milliseconds $Speed;
       }
-    } else {
+    }
+    else {
       [void][Console]::Write($text);
     }
     if ($delayIsRequired) {
@@ -1463,9 +1501,11 @@ class clistyle : PsRecord {
     foreach ($name in @("NuGet", "PowerShellGet")) {
       if ($force) {
         Install-PackageProvider $name -Force
-      } elseif ($PackageProviderNames -notcontains $name) {
+      }
+      elseif ($PackageProviderNames -notcontains $name) {
         Install-PackageProvider $name -Force
-      } else {
+      }
+      else {
         $v ? (Write-Console "PackageProvider '$name' is already Installed." -f Wheat) : $null
       }
     }
@@ -1474,7 +1514,8 @@ class clistyle : PsRecord {
     # BeautifyTerminal :
     if ($this.IsTerminalInstalled()) {
       $this.AddColorScheme()
-    } else {
+    }
+    else {
       Write-Warning "Windows terminal is not Installed!"
     }
     $this.InstallNerdFont()
@@ -1486,9 +1527,9 @@ class clistyle : PsRecord {
     if (!(Test-Path -Path $env:USERPROFILE/.config/winfetch/config.ps1)) {
       winfetch -genconf
     }
-        (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $ShowDisks = @("*")', '$ShowDisks = @("*")') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
-        (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $memorystyle', '$memorystyle') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
-        (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $diskstyle', '$diskstyle') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
+    (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $ShowDisks = @("*")', '$ShowDisks = @("*")') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
+    (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $memorystyle', '$memorystyle') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
+    (Get-Content $env:USERPROFILE/.config/winfetch/config.ps1).Replace('# $diskstyle', '$diskstyle') | Set-Content $env:USERPROFILE/.config/winfetch/config.ps1
     # RESET current exit code:
     $this.CurrExitCode = $true
 
@@ -1499,11 +1540,13 @@ class clistyle : PsRecord {
     if ($force) {
       # Invoke-Command -ScriptBlock $Load_Profile_Functions
       $this.CurrExitCode = $? -and $($this.Create_Prompt_Function())
-    } else {
+    }
+    else {
       if (!$($this.IsInitialised())) {
         # Invoke-Command -ScriptBlock $Load_Profile_Functions
         $this.CurrExitCode = $? -and $($this.Create_Prompt_Function())
-      } else {
+      }
+      else {
         $v ? (Write-Console "[clistyle] is already Initialized, Skipping ..." -f Wheat) : $null
       }
     }
@@ -1524,7 +1567,8 @@ class clistyle : PsRecord {
         return (Get-Content $($this.WINDOWS_TERMINAL_JSON_PATH) -Raw | ConvertFrom-Json)
       }
       Write-Warning "Could not find WINDOWS_TERMINAL_JSON_PATH!"
-    } else {
+    }
+    else {
       Write-Warning "Windows terminal is not installed!"
     }
     return $null
@@ -1562,17 +1606,20 @@ class clistyle : PsRecord {
       # Check color schema added before or not?
       if ($settings.schemes | Where-Object -Property name -EQ $sonokaiSchema.name) {
         Write-Host "[clistyle] Terminal Color Theme was added before"
-      } else {
+      }
+      else {
         $settings.schemes += $sonokaiSchema
         # Check default profile has colorScheme or not
         if ($settings.profiles.defaults | Get-Member -Name 'colorScheme' -MemberType Properties) {
           $settings.profiles.defaults.colorScheme = $sonokaiSchema.name
-        } else {
+        }
+        else {
           $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name 'colorScheme' -Value $sonokaiSchema.name
         }
         $this.SaveTerminalSettings($settings);
       }
-    } else {
+    }
+    else {
       Write-Warning "[clistyle] Could not get TerminalSettings, please make sure windowsTerminal is installed."
     }
   }
@@ -1611,7 +1658,8 @@ class clistyle : PsRecord {
       # Check default profile has font or not
       if ($settings.profiles.defaults | Get-Member -Name 'font' -MemberType Properties) {
         $settings.profiles.defaults.font.face = 'FiraCode Nerd Font'
-      } else {
+      }
+      else {
         $settings.profiles.defaults | Add-Member -MemberType NoteProperty -Name 'font' -Value $(
           [PSCustomObject]@{
             face = 'FiraCode Nerd Font'
@@ -1619,7 +1667,8 @@ class clistyle : PsRecord {
         ) | ConvertTo-Json
       }
       $this.SaveTerminalSettings($settings);
-    } else {
+    }
+    else {
       Write-Warning "Could update Terminal font settings!"
     }
   }
@@ -1679,9 +1728,11 @@ class clistyle : PsRecord {
     $Host_OS = $this.HostOS.ToString()
     if ($Host_OS -eq "MacOS") {
       $v ? (Write-Console "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/macos`n" -f Wheat) : $null
-    } elseif ($Host_OS -eq "Linux") {
+    }
+    elseif ($Host_OS -eq "Linux") {
       $v ? (Write-Console "`n$installInstructions`n`nhttps://ohmyposh.dev/docs/installation/linux" -f Wheat) : $null
-    } elseif ($Host_OS -eq "Windows") {
+    }
+    elseif ($Host_OS -eq "Windows") {
       $arch = (Get-CimInstance -Class Win32_Processor -Property Architecture).Architecture | Select-Object -First 1
       switch ($arch) {
         0 { $installer = "install-386.exe" }
@@ -1689,7 +1740,8 @@ class clistyle : PsRecord {
         9 {
           if ([Environment]::Is64BitOperatingSystem) {
             $installer = "install-amd64.exe"
-          } else {
+          }
+          else {
             $installer = "install-386.exe"
           }
         }
@@ -1720,7 +1772,8 @@ class clistyle : PsRecord {
       & "$omp_installer" /VERYSILENT $installMode | Out-Null
       $omp_installer | Remove-Item
       #todo: refresh the shell
-    } else {
+    }
+    else {
       throw "Error: Could not determine the Host operating system."
     }
   }
@@ -1771,11 +1824,13 @@ class clistyle : PsRecord {
           $all_spec_docs_paths[0]
         }
         $commondocs
-      } else {
+      }
+      else {
         [IO.Path]::Combine($UsrProfile, 'Documents')
       }
       $mydocsPath
-    } else {
+    }
+    else {
       $User_docs_Path
     }
     return $Documents_Path -as [IO.DirectoryInfo]
@@ -1791,7 +1846,7 @@ class clistyle : PsRecord {
     $gistId = $gisturi.Segments[-1];
     $jsoncontent = Invoke-WebRequest "https://gist.githubusercontent.com/chadnpc/$gistId/raw/$fileName" -Verbose:$false | Select-Object -ExpandProperty Content
     if ([string]::IsNullOrWhiteSpace("$jsoncontent ".Trim())) {
-      Throw [System.IO.InvalidDataException]::NEW('FAILED to get valid json string gtom github gist')
+      throw [System.IO.InvalidDataException]::NEW('FAILED to get valid json string gtom github gist')
     }
     return $jsoncontent
   }
@@ -1805,7 +1860,8 @@ class clistyle : PsRecord {
       if (!$this.OmpJsonFile.Directory.Exists) { [void]$this.Create_Directory($this.OmpJsonFile.Directory.FullName) }
       $this.OmpJsonFile = New-Item -ItemType File -Path ([IO.Path]::Combine($this.OmpJsonFile.Directory.FullName, $this.OmpJsonFile.Name))
       $this.get_omp_Json($fileName, $gisturi) | Out-File ($this.OmpJsonFile.FullName) -Encoding utf8
-    } else {
+    }
+    else {
       Write-Host "Found $($this.OmpJsonFile)" -ForegroundColor Green
     }
     $this.ompJson = [IO.File]::ReadAllLines($this.OmpJsonFile.FullName)
@@ -1852,7 +1908,8 @@ class clistyle : PsRecord {
     if ([string]::IsNullOrWhiteSpace("$([string]$this.ompJson) ".Trim())) {
       try {
         $this.ompJson = $this.get_omp_Json()
-      } catch [System.Net.Http.HttpRequestException], [System.Net.Sockets.SocketException] {
+      }
+      catch [System.Net.Http.HttpRequestException], [System.Net.Sockets.SocketException] {
         throw [System.Exception]::New('gist.githubusercontent.com:443  Please check your internet')
       }
     }
@@ -1867,14 +1924,15 @@ class clistyle : PsRecord {
       Write-Host "Add OH_MY_POSH to Profile ... " -NoNewline -ForegroundColor DarkYellow
       Add-Content -Path $File.FullName -Value $sb.ToString()
       Write-Host "Done." -ForegroundColor Yellow
-    } else {
+    }
+    else {
       Write-Host "OH_MY_POSH is added to Profile." -ForegroundColor Green
     }
   }
   [void] Set_TerminalUI() {
-        (Get-Variable -Name Host -ValueOnly).UI.RawUI.WindowTitle = $this.WindowTitle
-        (Get-Variable -Name Host -ValueOnly).UI.RawUI.ForegroundColor = "White"
-        (Get-Variable -Name Host -ValueOnly).PrivateData.ErrorForegroundColor = "DarkGray"
+    (Get-Variable -Name Host -ValueOnly).UI.RawUI.WindowTitle = $this.WindowTitle
+    (Get-Variable -Name Host -ValueOnly).UI.RawUI.ForegroundColor = "White"
+    (Get-Variable -Name Host -ValueOnly).PrivateData.ErrorForegroundColor = "DarkGray"
   }
   [string] GetWindowTitle() {
     $Title = ($this.GetCurrentProces().Path -as [IO.FileInfo]).BaseName
@@ -1899,7 +1957,8 @@ class clistyle : PsRecord {
       # Admin indicator not neded, since Windows11 build 22557.1
       if ($UserRole.HasAdminPriv) { $Title += ' (Admin)' }
       if ($UserRole.HasUserPriv -and !($UserRole.HasAdminPriv)) { $Title += ' (User)' }
-    } catch [System.PlatformNotSupportedException] {
+    }
+    catch [System.PlatformNotSupportedException] {
       $Title += $($this.b1 + $this.b2 + ' (User)')
     }
     return $Title
@@ -1913,7 +1972,8 @@ class clistyle : PsRecord {
       if ($CrVersn -gt $MinVern) {
         # Write-ColorOutput -ForegroundColor DarkCyan $($this.Default_Term_Ascii)
         Write-Host "$($this.Default_Term_Ascii)" -ForegroundColor Green
-      } else {
+      }
+      else {
         $this.Write_RGB($this.Default_Term_Ascii, 'SlateBlue')
       }
       Write-Host ''
@@ -1950,10 +2010,12 @@ class clistyle : PsRecord {
       $b = "$($escape)48;2;$($24bitcolors.$BackgroundColor.Red);$($24bitcolors.$BackgroundColor.Green);$($24bitcolors.$BackgroundColor.Blue)m"
       if ([bool](Get-Command Write-Info -ErrorAction SilentlyContinue)) {
         Write-Info ($f + $b + $Text + $resetAttributes) -NoNewLine:$NoNewLine
-      } else {
+      }
+      else {
         Write-Host ($f + $b + $Text + $resetAttributes) -NoNewline:$NoNewLine
       }
-    } else {
+    }
+    else {
       throw [System.Management.Automation.RuntimeException]::new("Writing to the console in 24-bit colors can only work with PowerShell versions lower than '5.1 build 14931' or above.`nBut yours is '$VersionNum' build '$psBuild'")
     }
   }
@@ -1976,9 +2038,11 @@ class clistyle : PsRecord {
     $width = ($chost.UI.RawUI.MaxWindowSize.Width * 2)
     if ($chost.Name -ne "ConsoleHost") {
       Write-Warning "This command must be run from a PowerShell console session. Not the PowerShell ISE or Visual Studio Code or similar environments."
-    } elseif (($title.length -ge $width)) {
+    }
+    elseif (($title.length -ge $width)) {
       Write-Warning "Your title is too long. It needs to be less than $width to fit your current console."
-    } else {
+    }
+    else {
       $chost.ui.RawUI.WindowTitle = $Title
     }
   }
@@ -2013,28 +2077,33 @@ class clistyle : PsRecord {
               Write-Host -NoNewline "$($this.b2) ";
               if ($location -eq "$env:UserProfile") {
                 Write-Host $($this.Home_Indic) -NoNewline -ForegroundColor DarkCyan;
-              } elseif ($location.Contains("$env:UserProfile")) {
+              }
+              elseif ($location.Contains("$env:UserProfile")) {
                 $location = $($location.replace("$env:UserProfile", "$($this.swiglyChar)"));
                 if ($location.Length -gt 25) {
                   $location = $this.Get_Short_Path($location, $this.dt)
                 }
                 Write-Host $location -NoNewline -ForegroundColor DarkCyan
-              } else {
+              }
+              else {
                 Write-Host $shortLoc -NoNewline -ForegroundColor DarkCyan
               }
               # add a newline
               if ($IsGitRepo) {
                 Write-Host $((Write-VcsStatus) + "`n")
-              } else {
+              }
+              else {
                 Write-Host "`n"
               }
-            } catch {
+            }
+            catch {
               #Do this if a terminating exception happens#
               # if ($_.Exception.WasThrownFromThrowStatement) {
               #     [System.Management.Automation.ErrorRecord]$_ | Write-Log $($this.LogFile.FullName)
               # }
               $(Get-Variable Host).Value.UI.WriteErrorLine("[PromptError] [$($_.FullyQualifiedErrorId)] $($_.Exception.Message) # see the Log File : $($this.LogFile.FullName) $($this.nl)")
-            } finally {
+            }
+            finally {
               #Do this after the try block regardless of whether an exception occurred or not
               Set-Variable -Name LASTEXITCODE -Scope Global -Value $($this.realLASTEXITCODE)
             }
@@ -2043,10 +2112,12 @@ class clistyle : PsRecord {
         )
       ) -Force
       $this.CurrExitCode = $this.CurrExitCode -and $?
-    } catch {
+    }
+    catch {
       $this.CurrExitCode = $false
       # Write-Log -ErrorRecord $_
-    } finally {
+    }
+    finally {
       Set-Variable -Name IsPromptInitialised -Value $($this.CurrExitCode) -Visibility Public -Scope Global;
     }
   }
@@ -2078,11 +2149,13 @@ class clistyle : PsRecord {
       for ($i = ($splitPath.Count - $KeepAfter); $i -lt $splitPath.Count; $i++) {
         if ($i -eq ($splitPath.Count - 1)) {
           $outPath += $splitPath[$i]
-        } else {
+        }
+        else {
           $outPath += $splitPath[$i] + $Separator
         }
       }
-    } else {
+    }
+    else {
       $outPath = $splitPath -join $Separator
       if ($splitPath.Count -eq 1) {
         $outPath += $Separator
@@ -2129,7 +2202,8 @@ class NetworkManager {
       $ReadStream.Close()
       $Response.Close()
       return $Content
-    } else {
+    }
+    else {
       throw "The request failed with status code: $($Response.StatusCode)"
     }
   }
@@ -2137,7 +2211,8 @@ class NetworkManager {
     $HostOs = Get-HostOs
     if ($HostOs -eq "Linux") {
       sudo iptables -P OUTPUT DROP
-    } else {
+    }
+    else {
       netsh advfirewall set allprofiles firewallpolicy blockinbound, blockoutbound
     }
   }
@@ -2145,7 +2220,8 @@ class NetworkManager {
     $HostOs = Get-HostOs
     if ($HostOs -eq "Linux") {
       sudo iptables -P OUTPUT ACCEPT
-    } else {
+    }
+    else {
       netsh advfirewall set allprofiles firewallpolicy blockinbound, allowoutbound
     }
   }
@@ -2210,9 +2286,11 @@ class NetworkManager {
     try {
       [System.Net.NetworkInformation.PingReply]$PingReply = [System.Net.NetworkInformation.Ping]::new().Send($HostName);
       $cs = $PingReply.Status -eq [System.Net.NetworkInformation.IPStatus]::Success
-    } catch [System.Net.Sockets.SocketException], [System.Net.NetworkInformation.PingException] {
+    }
+    catch [System.Net.Sockets.SocketException], [System.Net.NetworkInformation.PingException] {
       $cs = $false
-    } catch {
+    }
+    catch {
       $cs = $false;
       Write-Error $_
     }
@@ -2237,7 +2315,8 @@ class NetworkManager {
     [regex] $IPv6Regex = $IPv6RegexString
     if ($IP -imatch "^$IPv6Regex$") {
       return $true
-    } else {
+    }
+    else {
       return $false
     }
   }
@@ -2245,7 +2324,8 @@ class NetworkManager {
     $RegEx = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{2}){6}$"
     if ($mac -match $RegEx) {
       return $true
-    } else {
+    }
+    else {
       return $false
     }
   }
@@ -2253,7 +2333,8 @@ class NetworkManager {
     $RegEx = "^(254|252|248|240|224|192|128).0.0.0$|^255.(254|252|248|240|224|192|128|0).0.0$|^255.255.(254|252|248|240|224|192|128|0).0$|^255.255.255.(255|254|252|248|240|224|192|128|0)$"
     if ($IP -match $RegEx) {
       return $true
-    } else {
+    }
+    else {
       return $false
     }
   }
@@ -2261,7 +2342,8 @@ class NetworkManager {
     $RegEx = "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
     if ($IP -match $RegEx) {
       return $true
-    } else {
+    }
+    else {
       return $false
     }
   }
@@ -2295,11 +2377,11 @@ class Activity : System.Diagnostics.Activity {
   [string]$OperationName
   [string]$TraceId
   Activity() {}
-  Activity([string]$Name)  : Base($Name) {
+  Activity([string]$Name)  : base($Name) {
     $this.OperationName = $Name
     $this.TraceId = ($Name | xconvert ToGuid).Guid
   }
-  Activity([object[]]$desc) : Base(($desc[0] ? [string]$desc[0] : [string]::Empty)) {
+  Activity([object[]]$desc) : base(($desc[0] ? [string]$desc[0] : [string]::Empty)) {
     if ($desc[0]) {
       $this.OperationName = $desc[0]
       $this.TraceId = ([string]$desc[0] | xconvert ToGuid).Guid
@@ -2400,7 +2482,8 @@ class ProgressUtil {
       for ($i = 0; $i -lt $PBLength; $i++) {
         if ($i -ge $p) {
           Write-Console ' ' -NoNewLine
-        } else {
+        }
+        else {
           Write-Console ([ProgressUtil]::data.ProgressBlock) -f $PBcolor -NoNewLine
         }
       }
@@ -2428,7 +2511,7 @@ class ProgressUtil {
           })
         [System.Threading.Thread]::Sleep(50)
         Write-Console ("`b" * ($length + $progressMsg.Length)) -NoNewLine -f $PmsgColor
-        [Console]::CursorTop = $originalY
+        [ProgressUtil]::SetCursorPosition(0, $originalY)
       }
     }
     Write-Console "`b$progressMsg ... " -NoNewLine -f $PmsgColor
@@ -2442,7 +2525,8 @@ class ProgressUtil {
         $errormessages = $Errors.Exception.Message -join "`n"
       }
       Write-Console "Completed with errors.`n`t$errormessages" -f Salmon
-    } else {
+    }
+    else {
       Write-Console "Done" -f Green
     }
     [Console]::CursorVisible = $true;
@@ -2451,6 +2535,52 @@ class ProgressUtil {
   static [System.Management.Automation.Job] WaitJob([string]$progressMsg, [scriptblock]$sb, [Object[]]$ArgumentList) {
     $Job = ($null -ne $ArgumentList) ? (Start-ThreadJob -ScriptBlock $sb -ArgumentList $ArgumentList ) : (Start-ThreadJob -ScriptBlock $sb)
     return [ProgressUtil]::WaitJob($progressMsg, $Job)
+  }
+  static [void] SetCursorPosition([int]$X, [int]$Y) {
+    [ProgressUtil]::SetCursorPosition($X, $Y, $false, $false, $false)
+  }
+  static [void] SetCursorPosition([int]$X, [int]$Y, [bool]$ClampToWindow) {
+    [ProgressUtil]::SetCursorPosition($X, $Y, $ClampToWindow, $false, $false)
+  }
+  static [void] SetCursorPosition([int]$X, [int]$Y, [bool]$ClampToWindow, [bool]$Relative, [bool]$SuppressErrors) {
+    try {
+      # Check if we have a console (won't work in ISE, VS Code terminal, or redirected output)
+      if (![Console]::IsOutputRedirected -and [Console]::WindowHeight -gt 0) {
+        $currentX = [Console]::CursorLeft
+        $currentY = [Console]::CursorTop
+        # Calculate relative position if requested
+        if ($Relative) {
+          $X = $currentX + $X
+          $Y = $currentY + $Y
+        }
+        # Determine bounds
+        $maxHeight = if ($ClampToWindow) {
+          [Console]::WindowHeight - 1
+        }
+        else {
+          [Console]::BufferHeight - 1
+        }
+        $maxWidth = if ($ClampToWindow) {
+          [Console]::WindowWidth - 1
+        }
+        else {
+          [Console]::BufferWidth - 1
+        }
+        # Clamp values to valid range (0 to max)
+        $X = [Math]::Max(0, [Math]::Min($X, $maxWidth))
+        $Y = [Math]::Max(0, [Math]::Min($Y, $maxHeight))
+        # Set position atomically to avoid flicker
+        [Console]::SetCursorPosition($X, $Y)
+      }
+      elseif (-not $SuppressErrors) {
+        throw "Console output is redirected or not available"
+      }
+    }
+    catch {
+      if (-not $SuppressErrors) {
+        Write-Warning "Failed to set cursor position: $_"
+      }
+    }
   }
   static [void] ToggleShowProgress() {
     # .DESCRIPTION
@@ -2474,7 +2604,8 @@ class StackTracer {
     $result = $null
     if ([StackTracer]::stack.TryPop([ref]$result)) {
       return $result
-    } else {
+    }
+    else {
       throw [System.InvalidOperationException]::new("Stack is empty!")
     }
   }
@@ -2482,7 +2613,8 @@ class StackTracer {
     $result = $null
     if ([StackTracer]::stack.TryPeek([ref]$result)) {
       return $result
-    } else {
+    }
+    else {
       return [string]::Empty
     }
   }
@@ -2813,7 +2945,8 @@ class PsRunner : ThreadRunner {
           " Write-Debug 'Unable to forward environment variable $($obj.Name)'"
           '}'
         )
-      } else {
+      }
+      else {
         $strr = @(
           'try {'
           $(' $env:' + $obj.Name + ' = ' + "@'`n$($obj.Value)`n'@")
@@ -2854,11 +2987,13 @@ class PsRunner : ThreadRunner {
         if ($($FunctionText -split "`n")[0] -match "^function ") {
           if ($($FunctionText -split "`n") -match "^'@") {
             Write-Debug "Unable to forward function $($obj.Name) due to heredoc string: '@"
-          } else {
+          }
+          else {
             'Invoke-Expression ' + "@'`n$FunctionText`n'@"
           }
         }
-      } elseif ($($FunctionText -split "`n").Count -eq 1) {
+      }
+      elseif ($($FunctionText -split "`n").Count -eq 1) {
         if ($FunctionText -match "^function ") {
           'Invoke-Expression ' + "@'`n$FunctionText`n'@"
         }
@@ -2900,7 +3035,8 @@ class PsRunner : ThreadRunner {
             if ([string]::IsNullOrWhiteSpace($obj)) { continue }
             try {
               Invoke-Expression -Command $obj
-            } catch {
+            }
+            catch {
               throw ("Error {0} `n{1}" -f $_.Exception.Message, $_.ScriptStackTrace)
             }
           }
@@ -2911,7 +3047,7 @@ class PsRunner : ThreadRunner {
           }
         )
         # Monitor workers until they complete
-        While ($Runspaces.ToArray().Where({ $Jobs[$_.Key]["Handle"].IsCompleted -eq $false }).count -gt 0) {
+        while ($Runspaces.ToArray().Where({ $Jobs[$_.Key]["Handle"].IsCompleted -eq $false }).count -gt 0) {
           # Write-Host "$(Get-Date) Still running..." -f Green
           # foreach ($worker in $Runspaces.ToArray()) {
           #   $Id = $worker.Key
@@ -2928,12 +3064,14 @@ class PsRunner : ThreadRunner {
               Result = $__PS.EndInvoke($Jobs[$i]["Handle"])
               Status = "Completed"
             }
-          } catch {
+          }
+          catch {
             $Jobs[$i] = @{
               Result = $_.Exception.Message
               Status = "Failed"
             }
-          } finally {
+          }
+          finally {
             # Dispose of the PowerShell instance
             $__PS.Runspace.Close()
             $__PS.Runspace.Dispose()
@@ -3013,10 +3151,11 @@ $scripts += Get-ChildItem "$PSScriptRoot/Private/" -Filter "*.ps1" -Recurse -Err
 $scripts += $Public
 
 foreach ($file in $scripts) {
-  Try {
+  try {
     if ([string]::IsNullOrWhiteSpace($file.fullname)) { continue }
     . "$($file.fullname)"
-  } Catch {
+  }
+  catch {
     Write-Warning "Failed to import function $($file.BaseName): $_"
     $host.UI.WriteErrorLine($_)
   }
